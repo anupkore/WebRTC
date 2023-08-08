@@ -53,7 +53,7 @@ function Index()
     function handleConnect()
     {
         // Connect to Websocket Server
-        var socket = new SockJS('http://localhost:8080/websocket');
+        var socket = new SockJS('https://web-rtc-server-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
         stompClient = Stomp.over(socket);
         localID = localIdInp.current.value;
         console.log("My ID: " + localID)
