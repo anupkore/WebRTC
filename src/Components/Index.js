@@ -5,7 +5,7 @@ import Stomp from 'stompjs';
 
 function Index()
 {
-    const url = "http://localhost:8080"
+    // const url = "http://localhost:8080"
 
   
     const localVideo = useRef();
@@ -53,7 +53,7 @@ function Index()
     function handleConnect()
     {
         // Connect to Websocket Server
-        var socket = new SockJS('https://web-rtc-server-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
+        var socket = new SockJS('https://web-rtc-react-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com:8443/websocket');
         stompClient = Stomp.over(socket);
         localID = localIdInp.current.value;
         console.log("My ID: " + localID)
