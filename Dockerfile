@@ -62,8 +62,6 @@ RUN chmod 777 /app/node_modules/.cache/.eslintcache
 
 USER 1001
 
- 
-
 EXPOSE 3000
 
  
