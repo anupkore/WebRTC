@@ -28,7 +28,8 @@ function Index()
     // ICE Server Configurations
     const iceServers = {
         iceServer: {
-            urls: "stun:stun.l.google.com:19302"
+            urls: "stun:stun.l.google.com:19302",
+            iceTransportPolicy: 'relay'
         }
     }
     
@@ -82,7 +83,7 @@ function Index()
     function handleConnect()
     {
         // Connect to Websocket Server
-        var socket = new WebSocket('wss://web-rtc-server-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
+        var socket = new WebSocket('ws://localhost:8080/websocket');
         stompClient = Stomp.over(socket)
     
         
