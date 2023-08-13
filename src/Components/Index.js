@@ -28,7 +28,8 @@ function Index()
     // ICE Server Configurations
     const iceServers = {
         iceServer: {
-            urls:['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302' , 'stun:global.stun.twilio.com:3478']
+            urls:['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302' , 'stun:global.stun.twilio.com:3478'],
+            iceCandidatePoolSize: 2
         }
     }
     
@@ -82,7 +83,7 @@ function Index()
     function handleConnect()
     {
         // Connect to Websocket Server
-        var socket = new WebSocket('ws://localhost:8080/websocket');
+        var socket = new WebSocket('wss://web-rtc-server-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
         stompClient = Stomp.over(socket)
     
         
@@ -103,7 +104,7 @@ function Index()
             subscriptions.push(testServerSubscription);
             
             
-            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call", (call) => 
+            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call", async (call) => 
             {
                 console.log("Step - 2");
                 console.log("Call From: " + call.body)
@@ -115,7 +116,7 @@ function Index()
                 //Setting remote video stream to remote video div
                 localPeer.ontrack = (event) => {
                     try {
-                        if (event && event.streams && event.streams[0]) {
+                         if (event && event.streams && event.streams[0]) {
                             console.log(event.streams[0]);
                             remoteVideo.current.srcObject = event.streams[0];
                         } else {
@@ -155,6 +156,35 @@ function Index()
                     }
                     
                 }
+
+                localPeer.onicecandidate = async (event) => {
+                    console.log("Step - 4");
+                    try {
+                        if (event.candidate) {
+                            var candidate = {
+                                type: "candidate",
+                                lable: event.candidate.sdpMLineIndex,
+                                id: event.candidate.candidate,
+                            }
+                            console.log("Sending Candidate")
+                            console.log(candidate);
+                
+                            await new Promise((resolve, reject) => {
+                                stompClient.send("/app/candidate", {}, JSON.stringify({
+                                    "toUser": call.body,
+                                    "fromUser": localID,
+                                    "candidate": candidate
+                                }), resolve);
+                                console.log("Candidate sent")
+                            });
+                
+                        }
+                    } catch (error) {
+                        console.error("Error sending candidate:", error);
+                        setErrorMessage("Error sending candidate");
+                    }
+                }
+                
                 
     
 
@@ -173,9 +203,9 @@ function Index()
                 
     
 
+                // Creating And Sending Offer
 
-
-                localPeer.createOffer().then(description => {
+                await localPeer.createOffer().then(description => {
                     console.log("Step - 6");
                     localPeer.setLocalDescription(description).then(() => {
                         console.log("Setting Description" + description);
@@ -194,12 +224,13 @@ function Index()
                 });
 
             });
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-
-            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/offer", (offer) => 
+            //Receiving offers
+            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/offer",async (offer) => 
             {
                 try {
 
@@ -229,7 +260,7 @@ function Index()
 
 
 
-                localPeer.onicecandidate = (event) => {
+                 localPeer.onicecandidate = async (event) => {
                     if (event.candidate) {
                         var candidate = {
                             type: "candidate",
@@ -240,7 +271,7 @@ function Index()
                         console.log(candidate)
 
                         try {
-                            stompClient.send("/app/candidate", {}, JSON.stringify({
+                           await stompClient.send("/app/candidate", {}, JSON.stringify({
                                 "toUser": remoteID,
                                 "fromUser": localID,
                                 "candidate": candidate
@@ -261,6 +292,10 @@ function Index()
                 console.log(o)
                 localPeer.setRemoteDescription(new RTCSessionDescription(o))
 
+
+
+
+                //Creating and Sending Answer
                 try {
                     localPeer.createAnswer().then(description => {
                         localPeer.setLocalDescription(description)
@@ -281,62 +316,67 @@ function Index()
             });
 
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/answer", (answer) => {
-        console.log("Answer Came");
-        try {
-            var o = JSON.parse(answer.body)["answer"];
-            console.log(o);
-    
-            // Set the remote description using the answer received from the server
-            console.log("Setting remote description")
+            //Receiving Answers 
 
-
-            localPeer.setRemoteDescription(new RTCSessionDescription(o)).then(() => 
+            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/answer",(answer) =>
             {
-                console.log("Inside remote description");
+                console.log("Answer Came");
+                try {
+                        var o = JSON.parse(answer.body)["answer"];
+                        console.log(o);
+                        // Set the remote description using the answer received from the server
+                        console.log("Setting remote description")
+                        localPeer.setRemoteDescription(new RTCSessionDescription(o));
 
-                stompClient.subscribe("/user/" + localIdInp.current.value + "/topic/candidate", (answer) => 
+                    } catch (answerError)
+                    {
+                        console.error("Error processing answer:", answerError);
+                    }
+                }, 
+                (error) => {
+                    console.error("Error subscribing to answer topic:", error);
+            });
+
+
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+            
+                stompClient.subscribe("/user/" + localIdInp.current.value + "/topic/candidate", (candidate) => 
                 {
                     console.log("Candidate Came");
-                    try {
-                        console.log("Inside /Candidate")
-                        var o = JSON.parse(answer.body)["candidate"];
-                        console.log(o);
-                        console.log(o["lable"]);
-                        console.log(o["id"]);
-    
-                        // Create a new RTCIceCandidate using the information from the server
-                        console.log("Setting up a new RTCIceCandidate")
-                        var iceCandidate = new RTCIceCandidate({
-                            sdpMLineIndex: o["lable"],
-                            candidate: o["id"],
+                    console.log("Inside /Candidate")
+                    var o = JSON.parse(candidate.body)["candidate"];
+                    console.log(o);
+                    console.log(o["lable"]);
+                    console.log(o["id"]);
+            
+                    // Create a new RTCIceCandidate using the information from the server
+                    console.log("Setting up a new RTCIceCandidate")
+                    var iceCandidate = new RTCIceCandidate({
+                        sdpMLineIndex: o["lable"],
+                        candidate: o["id"],
                     });
-                        
-                        console.log("Adding iceCandidate")
-                        // Add the ice candidate to the peer connection
-                        localPeer.addIceCandidate(iceCandidate);
-                    } catch (candidateError) {
-                        console.error("Error processing ICE candidate:", candidateError);
-                    }
+                                
+                    console.log("Adding iceCandidate")
+                    // Add the ice candidate to the peer connection
+                    localPeer.addIceCandidate(iceCandidate);
                 });
-            });
-        } catch (answerError) {
-            console.error("Error processing answer:", answerError);
-        }
-    }, (error) => {
-        console.error("Error subscribing to answer topic:", error);
-    });
     
     
             console.log("Step - 3");
             stompClient.send("/app/addUser", {}, localIdInp.current.value)
     
-        } 
-        , error => {
+
+
+            //Frame Ends here
+        } , error => {
             console.error('Error connecting to WebSocket server:', error);
             window.alert('Error connecting to WebSocket server');
         })
@@ -460,23 +500,23 @@ function Index()
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
 
-function hideVideos() {
-    localVideo.current.srcObject = null;
-    remoteVideo.current.srcObject = null;
+        function hideVideos() {
+            localVideo.current.srcObject = null;
+            remoteVideo.current.srcObject = null;
 
-    if (localStream) {
-        console.log(localStream);
-        localStream.getTracks().forEach(track => {
-            track.stop();
-        });
-    }
+            if (localStream) {
+                console.log(localStream);
+                localStream.getTracks().forEach(track => {
+                    track.stop();
+                });
+            }
 
-    if (remoteStream) {
-        remoteStream.getTracks().forEach(track => {
-            track.stop();
-        });
-    }
-}
+            if (remoteStream) {
+                remoteStream.getTracks().forEach(track => {
+                    track.stop();
+                });
+            }
+        }
     
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
