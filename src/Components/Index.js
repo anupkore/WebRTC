@@ -83,7 +83,8 @@ function Index()
     function handleConnect()
     {
         // Connect to Websocket Server
-        var socket = new WebSocket('wss://web-rtc-server-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
+        //var socket = new WebSocket('wss://web-rtc-server-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
+        var socket = new WebSocket('ws://localhost:8080/websocket');
         stompClient = Stomp.over(socket)
     
         
@@ -102,6 +103,22 @@ function Index()
                 console.log('Received: ' + test.body);
             });
             subscriptions.push(testServerSubscription);
+
+
+            // Subscribe to call requests
+            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call-request", (callRequest) => {
+                const caller = JSON.parse(callRequest.body);
+                const acceptCall = window.confirm(`Incoming call from ${caller}. Accept?`);
+    
+                if (acceptCall) {
+                        // Send call acceptance back to the caller
+                    //     stompClient.send("/app/call-accept", {}, JSON.stringify({
+                    //     "caller": caller,
+                    //     "callee": localID
+                    // }));
+                    stompClient.send("/app/call", {}, JSON.stringify({"callTo": localIdInp.current.value, "callFrom": caller}))
+                }
+            });
             
             
             stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call", async (call) => 
@@ -323,7 +340,7 @@ function Index()
 
             //Receiving Answers 
 
-            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/answer",(answer) =>
+             stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/answer",(answer) =>
             {
                 console.log("Answer Came");
                 try {
@@ -393,7 +410,8 @@ function Index()
     function handleCall()
     {
         remoteID = remoteIdInp.current.value
-        stompClient.send("/app/call", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
+        stompClient.send("/app/call-request", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
+        //stompClient.send("/app/call", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
     }
 
 
@@ -429,39 +447,6 @@ function Index()
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    // const toggleVideo = async () => {
-    //     const newVideoEnabled = !videoEnabled;
-    //     try 
-    //     {
-    //         //if(newVideoEnabled===false)
-    //         //{
-    //             localStream.getVideoTracks().forEach(track => {
-    //                 track.enabled = newVideoEnabled; // Stop the current video track
-    //             });
-    //             setVideoEnabled(newVideoEnabled);
-    //         //}
-    //         // else
-    //         // {
-    //         //     const newStream = new MediaStream();
-                
-    //         //     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    //         //         stream.getVideoTracks().forEach(track => {
-    //         //             newStream.addTrack(track);
-    //         //         });
-                
-    //         //     localVideo.current.srcObject = newStream; // Update video element
-    //         //     setVideoEnabled(newVideoEnabled); // Update state
-    //         // } 
-    //     }
-    //     catch (error) 
-    //     {
-    //         console.error("Error toggling video:", error);
-    //     }
-    // };
-
-    // const toggleVideo = () => {
-    //     setVideoEnabled(!videoEnabled);
-    // };
 
     const toggleVideo = async () => {
         
