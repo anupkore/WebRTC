@@ -341,7 +341,7 @@ function Index() {
             stompClient.subscribe("/topic/reminder", message => {
                 // Display the reminder message to both the caller and the callee
                 console.log('Reminder:', JSON.parse(message.body).message);
-                window.alert("Reminder: 1 Minute remaining"+JSON.parse(message.body).message);
+                window.alert("Reminder: "+JSON.parse(message.body).message);
                 setRemainder(JSON.parse(message.body).message);
             });
 
@@ -409,7 +409,8 @@ function Index() {
     function handleLeave() {
         clearTimeout(showReminder);
         clearTimeout(endCallAutomatically);
-        stompClient.send("/app/leave", {}, localID);
+        if (stompClient) {
+            stompClient.send("/app/leave", {}, localID);
         hideVideos();
 
         // Disconnect the WebSocket connection
@@ -418,6 +419,10 @@ function Index() {
         });
 
         window.location.href = "/test";
+        } else {
+            window.location.href = "/test";
+        }
+        
     }
 
 
