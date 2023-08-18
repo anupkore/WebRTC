@@ -303,7 +303,28 @@ function Index() {
                     console.log(o);
                     // Set the remote description using the answer received from the server
                     console.log("Setting remote description")
-                    localPeer.setRemoteDescription(new RTCSessionDescription(o));
+                    localPeer.setRemoteDescription(new RTCSessionDescription(o)).then(()=>{
+                        stompClient.subscribe("/user/" + localIdInp.current.value + "/topic/candidate", (candidate) => {
+                            console.log("Candidate Came");
+                            console.log("Inside /Candidate")
+                            var o = JSON.parse(candidate.body)["candidate"];
+                            console.log(o);
+                            console.log(o["lable"]);
+                            console.log(o["id"]);
+            
+                            // Create a new RTCIceCandidate using the information from the server
+                            console.log("Setting up a new RTCIceCandidate")
+                            var iceCandidate = new RTCIceCandidate({
+                                sdpMLineIndex: o["lable"],
+                                candidate: o["id"],
+                            });
+            
+                            console.log("Adding iceCandidate")
+            
+                            // Add the ice candidate to the peer connection
+                            localPeer.addIceCandidate(iceCandidate);
+                        });
+                    });
 
                 } catch (answerError) {
                     console.error("Error processing answer:", answerError);
@@ -385,11 +406,17 @@ function Index() {
     }
 
     function handleCall() {
-        remoteID = remoteIdInp.current.value
-        stompClient.send("/app/call-request", {}, JSON.stringify({ "callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value }))
-        //stompClient.send("/app/call", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
-        setTimeout(showReminder, 2 * 60 * 1000);
-        setTimeout(endCallAutomatically, 3 * 60 * 1000);
+        if (stompClient) {
+            remoteID = remoteIdInp.current.value
+            stompClient.send("/app/call-request", {}, JSON.stringify({ "callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value }))
+            //stompClient.send("/app/call", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
+            setTimeout(showReminder, 2 * 60 * 1000);
+            setTimeout(endCallAutomatically, 3 * 60 * 1000);
+        } else {
+            setErrorMessage("Stomp is not available");
+            window.alert("User Already Busy in Another Call");
+        }
+        
     }
 
 
