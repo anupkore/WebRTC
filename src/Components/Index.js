@@ -1,11 +1,9 @@
 import 'bootstrap/dist/css/bootstrap.css';
-import { useRef, useState , useEffect } from 'react';
-import * as SockJS from 'sockjs-client';
+import { useRef, useState, useEffect } from 'react';
 import Stomp from 'stompjs';
 
-function Index()
-{
-    
+function Index() {
+
     const localVideo = useRef();
     const remoteVideo = useRef();
     const localIdInp = useRef();
@@ -13,6 +11,8 @@ function Index()
     const [videoEnabled, setVideoEnabled] = useState(true);
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [errorMessage, setErrorMessage] = useState('');
+    const [remainder, setRemainder] = useState("");
+
 
     const [localStream, setLocalStream] = useState(null);
     let remoteStream;
@@ -21,37 +21,23 @@ function Index()
     let localID;
     let stompClient;
     let subscriptions = [];
-    
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////  
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////  
     // ICE Server Configurations
     const iceServers = {
         iceServer: {
-            urls:['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302' , 'stun:global.stun.twilio.com:3478'],
+            urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302', 'stun:global.stun.twilio.com:3478'],
             iceCandidatePoolSize: 2
         }
     }
-    
+
     localPeer = new RTCPeerConnection(iceServers)
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-    // if(videoEnabled)
-    // {
-    //     navigator.mediaDevices.getUserMedia({video: true, audio: true})
-    //     .then(stream => {
-    //         localStream = stream    
-    //         localVideo.current.srcObject = stream;
-    //         // access granted, stream is the webcam stream
-    //     })
-    //     .catch(error => {
-    //         // access denied or error occurred
-    //         console.log(error)
-    //     });
-    // }
 
 
     // Permissions for accessing the video stream and audio stream
@@ -74,30 +60,30 @@ function Index()
             }
         }
     }, [videoEnabled, audioEnabled]);
-    
+
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    function handleConnect()
-    {
+    function handleConnect() {
         // Connect to Websocket Server
         var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
         //var socket = new WebSocket('ws://localhost:8080/websocket');
         stompClient = Stomp.over(socket)
-    
-        
+
+
         localID = localIdInp.current.value;
         console.log("My ID: " + localID)
         console.log("Step - 1");
 
-        
-        stompClient.connect({}, frame => 
-        {
-    
+
+        stompClient.connect({}, frame => {
+
             console.log(frame)
-    
+
+
             // Subscribe to testing URL not very important
             const testServerSubscription = stompClient.subscribe('/topic/testServer', function (test) {
                 console.log('Received: ' + test.body);
@@ -109,31 +95,27 @@ function Index()
             stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call-request", (callRequest) => {
                 const caller = JSON.parse(callRequest.body);
                 const acceptCall = window.confirm(`Incoming call from ${caller}. Accept?`);
-    
+                //const acceptCall = true;
+
                 if (acceptCall) {
-                        // Send call acceptance back to the caller
-                    //     stompClient.send("/app/call-accept", {}, JSON.stringify({
-                    //     "caller": caller,
-                    //     "callee": localID
-                    // }));
-                    stompClient.send("/app/call", {}, JSON.stringify({"callTo": localIdInp.current.value, "callFrom": caller}))
+                    stompClient.send("/app/call", {}, JSON.stringify({ "callTo": localIdInp.current.value, "callFrom": caller }))
                 }
             });
-            
-            
-            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call", async (call) => 
-            {
+
+
+            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call", async (call) => {
                 console.log("Step - 2");
                 console.log("Call From: " + call.body)
                 console.log("Step - 3");
                 remoteID = call.body;
+                remoteIdInp.current.value = remoteID;
                 console.log("Remote ID: " + call.body)
-    
+
 
                 //Setting remote video stream to remote video div
                 localPeer.ontrack = (event) => {
                     try {
-                         if (event && event.streams && event.streams[0]) {
+                        if (event && event.streams && event.streams[0]) {
                             console.log(event.streams[0]);
                             remoteVideo.current.srcObject = event.streams[0];
                         } else {
@@ -145,8 +127,8 @@ function Index()
                         setErrorMessage("Error setting remote video stream:");
                     }
                 };
-    
-    
+
+
 
                 localPeer.onicecandidate = (event) => {
                     console.log("Step - 4");
@@ -166,12 +148,12 @@ function Index()
                                 "candidate": candidate
                             }))
                         }
-                        
+
                     } catch (error) {
                         console.error("Error sending candidate:", error);
                         setErrorMessage("Error sending candidate");
                     }
-                    
+
                 }
 
                 localPeer.onicecandidate = async (event) => {
@@ -185,7 +167,7 @@ function Index()
                             }
                             console.log("Sending Candidate")
                             console.log(candidate);
-                
+
                             await new Promise((resolve, reject) => {
                                 stompClient.send("/app/candidate", {}, JSON.stringify({
                                     "toUser": call.body,
@@ -194,16 +176,16 @@ function Index()
                                 }), resolve);
                                 console.log("Candidate sent")
                             });
-                
+
                         }
                     } catch (error) {
                         console.error("Error sending candidate:", error);
                         setErrorMessage("Error sending candidate");
                     }
                 }
-                
-                
-    
+
+
+
 
 
 
@@ -217,8 +199,8 @@ function Index()
                         console.error("Error adding track to localPeer:", error);
                     }
                 });
-                
-    
+
+
 
                 // Creating And Sending Offer
 
@@ -240,44 +222,48 @@ function Index()
                     setErrorMessage("Error creating offer");
                 });
 
+
+
+
+
             });
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
             //Receiving offers
-            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/offer",async (offer) => 
-            {
+            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/offer", async (offer) => {
                 try {
 
-                console.log("Step - 7");
-                console.log("Offer came")
-                var o = JSON.parse(offer.body)["offer"]
-                console.log(offer.body)
-                console.log(new RTCSessionDescription(o))
-                console.log(typeof (new RTCSessionDescription(o)))
-                    
+                    console.log("Step - 7");
+                    console.log("Offer came")
+                    var o = JSON.parse(offer.body)["offer"]
+                    console.log(offer.body)
+                    console.log(new RTCSessionDescription(o))
+                    console.log(typeof (new RTCSessionDescription(o)))
+                    console.log(o)
+                    localPeer.setRemoteDescription(new RTCSessionDescription(o))
+
                 } catch (error) {
                     console.error("Error Handling the Offer", error)
                     setErrorMessage("Error Handling the Offer");
                 }
-                
-    
+
+
                 localPeer.ontrack = (event) => {
                     console.log("Step - 8");
                     console.log(event.streams[0])
                     console.log(event.track.kind)
                     //if (event.track.kind === 'video') {
-                        // Set the remote stream only when a video track is received
-                        remoteVideo.current.srcObject = event.streams[0];
+                    // Set the remote stream only when a video track is received
+                    remoteVideo.current.srcObject = event.streams[0];
                     //}
-                    
+
                 }
 
 
 
-                 localPeer.onicecandidate = async (event) => {
+                localPeer.onicecandidate = async (event) => {
                     if (event.candidate) {
                         var candidate = {
                             type: "candidate",
@@ -288,7 +274,7 @@ function Index()
                         console.log(candidate)
 
                         try {
-                           await stompClient.send("/app/candidate", {}, JSON.stringify({
+                            await stompClient.send("/app/candidate", {}, JSON.stringify({
                                 "toUser": remoteID,
                                 "fromUser": localID,
                                 "candidate": candidate
@@ -297,17 +283,18 @@ function Index()
                             console.error("Error sending Candidate");
                             setErrorMessage("Error sending Candidate");
                         }
-                        
+
                     }
                 }
-    
+
+
+
                 // Adding Audio and Video Local Peer
                 localStream.getTracks().forEach(track => {
                     localPeer.addTrack(track, localStream);
                 });
 
-                console.log(o)
-                localPeer.setRemoteDescription(new RTCSessionDescription(o))
+
 
 
 
@@ -323,13 +310,13 @@ function Index()
                             "fromUser": localID,
                             "answer": description
                         }));
-        
+
                     })
                 } catch (error) {
                     console.error("An error occurred while sending description");
                     setErrorMessage("An error occurred while sending description");
                 }
-                
+
             });
 
 
@@ -340,23 +327,18 @@ function Index()
 
             //Receiving Answers 
 
-             stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/answer",(answer) =>
-            {
+            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/answer", async (answer) => {
                 console.log("Answer Came");
                 try {
-                        var o = JSON.parse(answer.body)["answer"];
-                        console.log(o);
-                        // Set the remote description using the answer received from the server
-                        console.log("Setting remote description")
-                        localPeer.setRemoteDescription(new RTCSessionDescription(o));
+                    var o = JSON.parse(answer.body)["answer"];
+                    console.log(o);
+                    // Set the remote description using the answer received from the server
+                    console.log("Setting remote description")
+                    localPeer.setRemoteDescription(new RTCSessionDescription(o));
 
-                    } catch (answerError)
-                    {
-                        console.error("Error processing answer:", answerError);
-                    }
-                }, 
-                (error) => {
-                    console.error("Error subscribing to answer topic:", error);
+                } catch (answerError) {
+                    console.error("Error processing answer:", answerError);
+                }
             });
 
 
@@ -364,54 +346,81 @@ function Index()
             ////////////////////////////////////////////////////////////////////////////////////////////////////////
             ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-            
-                stompClient.subscribe("/user/" + localIdInp.current.value + "/topic/candidate", (candidate) => 
-                {
-                    console.log("Candidate Came");
-                    console.log("Inside /Candidate")
-                    var o = JSON.parse(candidate.body)["candidate"];
-                    console.log(o);
-                    console.log(o["lable"]);
-                    console.log(o["id"]);
-            
-                    // Create a new RTCIceCandidate using the information from the server
-                    console.log("Setting up a new RTCIceCandidate")
-                    var iceCandidate = new RTCIceCandidate({
-                        sdpMLineIndex: o["lable"],
-                        candidate: o["id"],
-                    });
-                                
-                    console.log("Adding iceCandidate")
-                    // Add the ice candidate to the peer connection
-                    localPeer.addIceCandidate(iceCandidate);
+
+            stompClient.subscribe("/user/" + localIdInp.current.value + "/topic/candidate", (candidate) => {
+                console.log("Candidate Came");
+                console.log("Inside /Candidate")
+                var o = JSON.parse(candidate.body)["candidate"];
+                console.log(o);
+                console.log(o["lable"]);
+                console.log(o["id"]);
+
+                // Create a new RTCIceCandidate using the information from the server
+                console.log("Setting up a new RTCIceCandidate")
+                var iceCandidate = new RTCIceCandidate({
+                    sdpMLineIndex: o["lable"],
+                    candidate: o["id"],
                 });
-    
-    
+
+                console.log("Adding iceCandidate")
+
+                // Add the ice candidate to the peer connection
+                localPeer.addIceCandidate(iceCandidate);
+            });
+
+
+            stompClient.subscribe("/topic/reminder", message => {
+                // Display the reminder message to both the caller and the callee
+                console.log('Reminder:', JSON.parse(message.body).message);
+                window.alert("Reminder: 1 Minute remaining"+JSON.parse(message.body).message);
+                setRemainder(JSON.parse(message.body).message);
+            });
+
+
             console.log("Step - 3");
             stompClient.send("/app/addUser", {}, localIdInp.current.value)
-    
+
 
 
             //Frame Ends here
-        } , error => {
-            console.error('Error connecting to WebSocket server:', error);
-            window.alert('Error connecting to WebSocket server');
-        })
-            
-        
-    
+        }
+            , error => {
+                console.error('Error connecting to WebSocket server:', error);
+                window.alert('Error connecting to WebSocket server');
+            })
+
+
+
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    function endCallAutomatically() {
+        console.log('Call ended automatically.');
+        handleLeave();
+    }
 
-    
-    function handleCall()
-    {
+    function showReminder() {
+        console.log('1 minutes remaining!');
+
+        // Send a reminder message to the WebSocket server
+        if (stompClient) {
+            const reminderMessage = {
+                type: 'reminder',
+                message: '1 minutes remaining!',
+            };
+
+            stompClient.send("/app/sendMessage", {}, JSON.stringify(reminderMessage));
+        }
+    }
+
+    function handleCall() {
         remoteID = remoteIdInp.current.value
-        stompClient.send("/app/call-request", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
+        stompClient.send("/app/call-request", {}, JSON.stringify({ "callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value }))
         //stompClient.send("/app/call", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
+        setTimeout(showReminder, 2 * 60 * 1000);
+        setTimeout(endCallAutomatically, 3 * 60 * 1000);
     }
 
 
@@ -419,8 +428,7 @@ function Index()
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function handleTest()
-    {
+    function handleTest() {
         stompClient.send("/app/testServer", {}, "Test Server")
     }
 
@@ -428,19 +436,23 @@ function Index()
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-    function handleLeave()
-    {
+
+    function handleLeave() {
+        clearTimeout(showReminder);
+        clearTimeout(endCallAutomatically);
         stompClient.send("/app/leave", {}, localID);
         hideVideos();
-    
-          // Disconnect the WebSocket connection
-        stompClient.disconnect(() => {
-        console.log('STOMP client disconnected');
-          });
 
-          window.location.href="/test";
+        // Disconnect the WebSocket connection
+        stompClient.disconnect(() => {
+            console.log('STOMP client disconnected');
+        });
+
+        window.location.href = "/test";
     }
+
+
+
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -449,15 +461,13 @@ function Index()
 
 
     const toggleVideo = async () => {
-        
-        let videoTrack = localStream.getTracks().find(track => track.kind ==='video');
-        if (videoTrack.enabled)
-        {
+
+        let videoTrack = localStream.getTracks().find(track => track.kind === 'video');
+        if (videoTrack.enabled) {
             videoTrack.enabled = false;
             document.getElementById('camera-btn').style.backgroundColor = "red";
         }
-        else
-        {
+        else {
             videoTrack.enabled = true;
             document.getElementById('camera-btn').style.backgroundColor = "black";
         }
@@ -465,15 +475,13 @@ function Index()
 
 
     const toggleAudio = async () => {
-        
-        let audioTrack = localStream.getTracks().find(track => track.kind ==='audio');
-        if (audioTrack.enabled)
-        {
+
+        let audioTrack = localStream.getTracks().find(track => track.kind === 'audio');
+        if (audioTrack.enabled) {
             audioTrack.enabled = false;
             document.getElementById('mic-btn').style.backgroundColor = "red";
         }
-        else
-        {
+        else {
             audioTrack.enabled = true;
             document.getElementById('mic-btn').style.backgroundColor = "black";
         }
@@ -483,33 +491,33 @@ function Index()
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
 
-        function hideVideos() {
-            localVideo.current.srcObject = null;
-            remoteVideo.current.srcObject = null;
 
-            if (localStream) {
-                console.log(localStream);
-                localStream.getTracks().forEach(track => {
-                    track.stop();
-                });
-            }
+    function hideVideos() {
+        localVideo.current.srcObject = null;
+        remoteVideo.current.srcObject = null;
 
-            if (remoteStream) {
-                remoteStream.getTracks().forEach(track => {
-                    track.stop();
-                });
-            }
+        if (localStream) {
+            console.log(localStream);
+            localStream.getTracks().forEach(track => {
+                track.stop();
+            });
         }
-    
-    
+
+        if (remoteStream) {
+            remoteStream.getTracks().forEach(track => {
+                track.stop();
+            });
+        }
+    }
+
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-    
-    return(
+
+
+    return (
 
         <>
             <div>
@@ -522,15 +530,18 @@ function Index()
                     <video id="remoteVideo" ref={remoteVideo} autoPlay className='m-3 w-50 bg-black'></video>
                 </div>
 
+
+
+
                 <div className='d-flex justify-content-center border-radius-50'>
-                    <div id='camera-btn' onClick={toggleVideo} style={{borderRadius:"50%" , padding:"20px" , backgroundColor:"black"}} className=' d-flex justify-content-center align-items-center m-5'>
-                        <img style={{height:"75px" , width:"75px"}} src="/icons/camera.png" alt='Camere Button' />
+                    <div id='camera-btn' onClick={toggleVideo} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "black" }} className=' d-flex justify-content-center align-items-center m-5'>
+                        <img style={{ height: "75px", width: "75px" }} src="/icons/camera.png" alt='Camere Button' />
                     </div>
-                    <div id='mic-btn' onClick={toggleAudio} style={{borderRadius:"50%" , padding:"20px" , backgroundColor:"black"}} className=' d-flex justify-content-center align-items-center m-5'>
-                        <img style={{height:"75px" , width:"75px"}} src="/icons/mic.png" alt='Camera Button' />
+                    <div id='mic-btn' onClick={toggleAudio} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "black" }} className=' d-flex justify-content-center align-items-center m-5'>
+                        <img style={{ height: "75px", width: "75px" }} src="/icons/mic.png" alt='Camera Button' />
                     </div>
-                    <div id='leave-btn' onClick={handleLeave} style={{borderRadius:"50%" , padding:"20px" , backgroundColor:"red"}} className=' d-flex justify-content-center align-items-center m-5'>
-                        <img style={{height:"75px" , width:"75px"}} src="/icons/phone.png" alt='Camera Button' />
+                    <div id='leave-btn' onClick={handleLeave} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "red" }} className=' d-flex justify-content-center align-items-center m-5'>
+                        <img style={{ height: "75px", width: "75px" }} src="/icons/phone.png" alt='Camera Button' />
                     </div>
                 </div>
 
@@ -559,7 +570,7 @@ function Index()
                 </div> */}
 
 
-                
+
             </div>
         </>
     );
