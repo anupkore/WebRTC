@@ -103,7 +103,7 @@ function Index() {
             });
 
 
-            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call", async (call) => {
+            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call",(call) => {
                 console.log("Step - 2");
                 console.log("Call From: " + call.body)
                 console.log("Step - 3");
@@ -156,37 +156,6 @@ function Index() {
 
                 }
 
-                localPeer.onicecandidate = async (event) => {
-                    console.log("Step - 4");
-                    try {
-                        if (event.candidate) {
-                            var candidate = {
-                                type: "candidate",
-                                lable: event.candidate.sdpMLineIndex,
-                                id: event.candidate.candidate,
-                            }
-                            console.log("Sending Candidate")
-                            console.log(candidate);
-
-                            await new Promise((resolve, reject) => {
-                                stompClient.send("/app/candidate", {}, JSON.stringify({
-                                    "toUser": call.body,
-                                    "fromUser": localID,
-                                    "candidate": candidate
-                                }), resolve);
-                                console.log("Candidate sent")
-                            });
-
-                        }
-                    } catch (error) {
-                        console.error("Error sending candidate:", error);
-                        setErrorMessage("Error sending candidate");
-                    }
-                }
-
-
-
-
 
 
                 // Adding Audio and Video Local Peer
@@ -204,7 +173,7 @@ function Index() {
 
                 // Creating And Sending Offer
 
-                await localPeer.createOffer().then(description => {
+                localPeer.createOffer().then(description => {
                     console.log("Step - 6");
                     localPeer.setLocalDescription(description).then(() => {
                         console.log("Setting Description" + description);
