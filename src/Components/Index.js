@@ -12,6 +12,8 @@ function Index() {
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [errorMessage, setErrorMessage] = useState('');
     const [remainder, setRemainder] = useState("");
+    const [callInitiated, setCallInitiated] = useState(false);
+
 
 
     const [localStream, setLocalStream] = useState(null);
@@ -191,7 +193,7 @@ function Index() {
                     setErrorMessage("Error creating offer");
                 });
 
-
+                
 
 
 
@@ -320,7 +322,7 @@ function Index() {
                             });
             
                             console.log("Adding iceCandidate")
-            
+                            setCallInitiated(true);
                             // Add the ice candidate to the peer connection
                             localPeer.addIceCandidate(iceCandidate);
                         });
@@ -353,7 +355,7 @@ function Index() {
                 });
 
                 console.log("Adding iceCandidate")
-
+                setCallInitiated(true);
                 // Add the ice candidate to the peer connection
                 localPeer.addIceCandidate(iceCandidate);
             });
@@ -549,16 +551,18 @@ function Index() {
 
 
 
-                <div className='d-flex justify-content-center mt-5'>
-                    <div>
-                        <input type="text" name="localId" id="localId" ref={localIdInp} placeholder="Enter Your ID" className='h-50 border-dark'></input>
-                        <button id="connectBtn" className='btn btn-primary m-3' onClick={handleConnect}>Connect</button>
+                {!callInitiated && (
+                    <div className='d-flex justify-content-center mt-5'>
+                        <div>
+                            <input type="text" name="localId" id="localId" ref={localIdInp} placeholder="Enter Your ID" className='h-50 border-dark'></input>
+                            <button id="connectBtn" className='btn btn-primary m-3' onClick={handleConnect}>Connect</button>
+                        </div>
+                        <div>
+                            <input type="text" name="remoteId" id="remoteId" ref={remoteIdInp} placeholder="Enter Remote ID" className='h-50 border-dark'></input>
+                            <button id="callBtn" className='btn btn-success m-3' onClick={handleCall}>Call</button>
+                        </div>
                     </div>
-                    <div>
-                        <input type="text" name="remoteId" id="remoteId" ref={remoteIdInp} placeholder="Enter Remote ID" className='h-50 border-dark'></input>
-                        <button id="callBtn" className='btn btn-success m-3' onClick={handleCall}>Call</button>
-                    </div>
-                </div>
+                )}
 
                 {/* <div className='d-flex justify-content-center mt-5'>
                     <button id="test" className='btn btn-danger m-3' onClick={handleLeave}>End Call</button>
