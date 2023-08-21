@@ -105,7 +105,7 @@ function Index() {
             });
 
 
-            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call",(call) => {
+            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call", (call) => {
                 console.log("Step - 2");
                 console.log("Call From: " + call.body)
                 console.log("Step - 3");
@@ -193,7 +193,7 @@ function Index() {
                     setErrorMessage("Error creating offer");
                 });
 
-                
+
 
 
 
@@ -233,7 +233,34 @@ function Index() {
                 }
 
 
+                // Adding Audio and Video Local Peer
+                localStream.getTracks().forEach(track => {
+                    localPeer.addTrack(track, localStream);
+                });
 
+
+
+                //Creating and Sending Answer
+                try {
+                    localPeer.createAnswer().then(description => {
+                        localPeer.setLocalDescription(description)
+                        console.log("Setting Local Description")
+                        console.log(description)
+                        stompClient.send("/app/answer", {}, JSON.stringify({
+                            "toUser": remoteID,
+                            "fromUser": localID,
+                            "answer": description
+                        }));
+
+                    })
+                } catch (error) {
+                    console.error("An error occurred while sending description");
+                    setErrorMessage("An error occurred while sending description");
+                }
+
+                
+                
+                //Sending Candidates to the ice server
                 localPeer.onicecandidate = async (event) => {
                     if (event.candidate) {
                         var candidate = {
@@ -258,36 +285,6 @@ function Index() {
                     }
                 }
 
-
-
-                // Adding Audio and Video Local Peer
-                localStream.getTracks().forEach(track => {
-                    localPeer.addTrack(track, localStream);
-                });
-
-
-
-
-
-
-                //Creating and Sending Answer
-                try {
-                    localPeer.createAnswer().then(description => {
-                        localPeer.setLocalDescription(description)
-                        console.log("Setting Local Description")
-                        console.log(description)
-                        stompClient.send("/app/answer", {}, JSON.stringify({
-                            "toUser": remoteID,
-                            "fromUser": localID,
-                            "answer": description
-                        }));
-
-                    })
-                } catch (error) {
-                    console.error("An error occurred while sending description");
-                    setErrorMessage("An error occurred while sending description");
-                }
-
             });
 
 
@@ -301,32 +298,10 @@ function Index() {
             stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/answer", async (answer) => {
                 console.log("Answer Came");
                 try {
-                    var o = JSON.parse(answer.body)["answer"];
-                    console.log(o);
-                    // Set the remote description using the answer received from the server
+                    var object = JSON.parse(answer.body)["answer"];
+                    console.log(object);
                     console.log("Setting remote description")
-                    localPeer.setRemoteDescription(new RTCSessionDescription(o)).then(()=>{
-                        stompClient.subscribe("/user/" + localIdInp.current.value + "/topic/candidate", (candidate) => {
-                            console.log("Candidate Came");
-                            console.log("Inside /Candidate")
-                            var o = JSON.parse(candidate.body)["candidate"];
-                            console.log(o);
-                            console.log(o["lable"]);
-                            console.log(o["id"]);
-            
-                            // Create a new RTCIceCandidate using the information from the server
-                            console.log("Setting up a new RTCIceCandidate")
-                            var iceCandidate = new RTCIceCandidate({
-                                sdpMLineIndex: o["lable"],
-                                candidate: o["id"],
-                            });
-            
-                            console.log("Adding iceCandidate")
-                            setCallInitiated(true);
-                            // Add the ice candidate to the peer connection
-                            localPeer.addIceCandidate(iceCandidate);
-                        });
-                    });
+                    localPeer.setRemoteDescription(new RTCSessionDescription(object));
 
                 } catch (answerError) {
                     console.error("Error processing answer:", answerError);
@@ -338,7 +313,7 @@ function Index() {
             ////////////////////////////////////////////////////////////////////////////////////////////////////////
             ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
+            //Receiving the candidate information
             stompClient.subscribe("/user/" + localIdInp.current.value + "/topic/candidate", (candidate) => {
                 console.log("Candidate Came");
                 console.log("Inside /Candidate")
@@ -361,10 +336,11 @@ function Index() {
             });
 
 
+
+            //Receiving the remainder information
             stompClient.subscribe("/topic/reminder", message => {
-                // Display the reminder message to both the caller and the callee
                 console.log('Reminder:', JSON.parse(message.body).message);
-                window.alert("Reminder: "+JSON.parse(message.body).message);
+                window.alert("Reminder: " + JSON.parse(message.body).message);
                 setRemainder(JSON.parse(message.body).message);
             });
 
@@ -418,7 +394,7 @@ function Index() {
             setErrorMessage("Stomp is not available");
             window.alert("User Already Busy in Another Call");
         }
-        
+
     }
 
 
@@ -440,18 +416,18 @@ function Index() {
         clearTimeout(endCallAutomatically);
         if (stompClient) {
             stompClient.send("/app/leave", {}, localID);
-        hideVideos();
+            hideVideos();
 
-        // Disconnect the WebSocket connection
-        stompClient.disconnect(() => {
-            console.log('STOMP client disconnected');
-        });
+            // Disconnect the WebSocket connection
+            stompClient.disconnect(() => {
+                console.log('STOMP client disconnected');
+            });
 
-        window.location.href = "/test";
+            window.location.href = "/test";
         } else {
             window.location.href = "/test";
         }
-        
+
     }
 
 
@@ -513,6 +489,25 @@ function Index() {
             });
         }
     }
+
+
+    function disconnectFromStomp() 
+    {
+        if (stompClient) {
+            stompClient.disconnect(() => {
+                console.log('STOMP client disconnected');
+            });
+        }
+    }
+    
+    // Attach the event listener to the window
+    useEffect(() => {
+        window.addEventListener('beforeunload', disconnectFromStomp);
+        return () => {
+            window.removeEventListener('beforeunload', disconnectFromStomp);
+        };
+    }, []);
+    
 
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
