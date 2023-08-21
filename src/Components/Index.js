@@ -314,26 +314,29 @@ function Index() {
             ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             //Receiving the candidate information
-            stompClient.subscribe("/user/" + localIdInp.current.value + "/topic/candidate", (candidate) => {
-                console.log("Candidate Came");
-                console.log("Inside /Candidate")
-                var o = JSON.parse(candidate.body)["candidate"];
-                console.log(o);
-                console.log(o["lable"]);
-                console.log(o["id"]);
-
-                // Create a new RTCIceCandidate using the information from the server
-                console.log("Setting up a new RTCIceCandidate")
-                var iceCandidate = new RTCIceCandidate({
-                    sdpMLineIndex: o["lable"],
-                    candidate: o["id"],
+            setTimeout(()=>{
+                stompClient.subscribe("/user/" + localIdInp.current.value + "/topic/candidate", (candidate) => {
+                    console.log("Candidate Came");
+                    console.log("Inside /Candidate")
+                    var o = JSON.parse(candidate.body)["candidate"];
+                    console.log(o);
+                    console.log(o["lable"]);
+                    console.log(o["id"]);
+    
+                    // Create a new RTCIceCandidate using the information from the server
+                    console.log("Setting up a new RTCIceCandidate")
+                    var iceCandidate = new RTCIceCandidate({
+                        sdpMLineIndex: o["lable"],
+                        candidate: o["id"],
+                    });
+    
+                    console.log("Adding iceCandidate")
+                    setCallInitiated(true);
+                    // Add the ice candidate to the peer connection
+                    localPeer.addIceCandidate(iceCandidate);
                 });
-
-                console.log("Adding iceCandidate")
-                setCallInitiated(true);
-                // Add the ice candidate to the peer connection
-                localPeer.addIceCandidate(iceCandidate);
-            });
+            },500)
+            
 
 
 
