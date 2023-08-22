@@ -144,11 +144,15 @@ function Index() {
                             }
                             console.log("Sending Candidate")
                             console.log(candidate)
-                            stompClient.send("/app/candidate", {}, JSON.stringify({
+
+                            setTimeout(()=>{
+                                stompClient.send("/app/candidate", {}, JSON.stringify({
                                 "toUser": call.body,
                                 "fromUser": localID,
                                 "candidate": candidate
-                            }))
+                                }))
+                            },500)
+                            
                         }
 
                     } catch (error) {
@@ -261,7 +265,7 @@ function Index() {
                 
                 
                 //Sending Candidates to the ice server
-                localPeer.onicecandidate = async (event) => {
+                localPeer.onicecandidate =(event) => {
                     if (event.candidate) {
                         var candidate = {
                             type: "candidate",
@@ -272,11 +276,14 @@ function Index() {
                         console.log(candidate)
 
                         try {
-                            await stompClient.send("/app/candidate", {}, JSON.stringify({
+                            setTimeout(()=>{
+                                stompClient.send("/app/candidate", {}, JSON.stringify({
                                 "toUser": remoteID,
                                 "fromUser": localID,
                                 "candidate": candidate
-                            }))
+                                }))
+                            },500)
+                            
                         } catch (error) {
                             console.error("Error sending Candidate");
                             setErrorMessage("Error sending Candidate");
@@ -314,7 +321,7 @@ function Index() {
             ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             //Receiving the candidate information
-            setTimeout(()=>{
+            
                 stompClient.subscribe("/user/" + localIdInp.current.value + "/topic/candidate", (candidate) => {
                     console.log("Candidate Came");
                     console.log("Inside /Candidate")
@@ -335,7 +342,7 @@ function Index() {
                     // Add the ice candidate to the peer connection
                     localPeer.addIceCandidate(iceCandidate);
                 });
-            },500)
+            
             
 
 
