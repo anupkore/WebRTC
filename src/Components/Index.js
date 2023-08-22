@@ -458,7 +458,7 @@ function Index() {
         }
         else {
             videoTrack.enabled = true;
-            document.getElementById('camera-btn').style.backgroundColor = "black";
+            document.getElementById('camera-btn').style.backgroundColor = "rgb(179,102,249,.9)";
         }
     };
 
@@ -472,7 +472,7 @@ function Index() {
         }
         else {
             audioTrack.enabled = true;
-            document.getElementById('mic-btn').style.backgroundColor = "black";
+            document.getElementById('mic-btn').style.backgroundColor = "rgb(179,102,249,.9)";
         }
     };
 
