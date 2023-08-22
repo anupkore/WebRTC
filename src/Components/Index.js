@@ -527,25 +527,25 @@ function Index() {
 
     return (
 
-        <>
-            <div>
-                <h1 className="text-center mt-5">
-                    Hi WebRTC From Anup.
+        
+            <div style={{backgroundImage: 'url("https://images.unsplash.com/photo-1668632150893-6bfccb01bdc2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8c3RhcnRzJTIwYXQlMjBuaWdodHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60")'}}>
+                <h1 className="text-center text-light">
+                    Hi WebRTC-Project From Anup.
                 </h1>
 
-                <div className="d-flex mt-5">
-                    <video id="localVideo" ref={localVideo} autoPlay muted className='m-3 w-50 h-25 bg-black'></video>
-                    <video id="remoteVideo" ref={remoteVideo} autoPlay className='m-3 w-50 bg-black'></video>
+                <div className="d-flex justify-content-center mt-5">
+                    <video id="localVideo" ref={localVideo} autoPlay muted className='m-2 bg-black' style={{height:"500px",width:"500px"}}></video>
+                    <video id="remoteVideo" ref={remoteVideo} autoPlay className='m-2 bg-black' style={{height:"500px",width:"500px"}}></video>
                 </div>
 
 
 
 
                 <div className='d-flex justify-content-center border-radius-50'>
-                    <div id='camera-btn' onClick={toggleVideo} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "black" }} className=' d-flex justify-content-center align-items-center m-5'>
+                    <div id='camera-btn' onClick={toggleVideo} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(179,102,249,.9)" }} className=' d-flex justify-content-center align-items-center m-5'>
                         <img style={{ height: "75px", width: "75px" }} src="/icons/camera.png" alt='Camere Button' />
                     </div>
-                    <div id='mic-btn' onClick={toggleAudio} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "black" }} className=' d-flex justify-content-center align-items-center m-5'>
+                    <div id='mic-btn' onClick={toggleAudio} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(179,102,249,.9)" }} className=' d-flex justify-content-center align-items-center m-5'>
                         <img style={{ height: "75px", width: "75px" }} src="/icons/mic.png" alt='Camera Button' />
                     </div>
                     <div id='leave-btn' onClick={handleLeave} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "red" }} className=' d-flex justify-content-center align-items-center m-5'>
@@ -582,7 +582,7 @@ function Index() {
 
 
             </div>
-        </>
+        
     );
 }
 
