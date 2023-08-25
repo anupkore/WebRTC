@@ -28,12 +28,36 @@ function Index() {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////  
     // ICE Server Configurations
+    // const iceServers = {
+    //     iceServer: {
+    //         urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302', 'stun:global.stun.twilio.com:3478'],
+    //         iceCandidatePoolSize: 2
+    //     }
+    // }
+
     const iceServers = {
-        iceServer: {
-            urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302', 'stun:global.stun.twilio.com:3478'],
-            iceCandidatePoolSize: 2
-        }
-    }
+        iceServers: [
+            {
+                urls: [
+                    'stun:stun1.l.google.com:19302',
+                    'stun:stun2.l.google.com:19302',
+                    'stun:global.stun.twilio.com:3478'
+                ]
+            },
+            {
+                urls: 'turn:relay.backups.cz',
+                username: 'webrtc',
+                credential: 'webrtc'
+            },
+            {
+                urls: 'turn:relay.backups.cz?transport=tcp',
+                username: 'webrtc',
+                credential: 'webrtc'
+            }
+        ],
+        iceCandidatePoolSize: 2
+    };
+    
 
     localPeer = new RTCPeerConnection(iceServers)
 
