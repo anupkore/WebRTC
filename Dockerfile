@@ -28,10 +28,6 @@ RUN npm install
 
  
 
-RUN npm install -g npm
-
- 
-
 COPY . .
 
  
