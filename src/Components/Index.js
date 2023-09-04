@@ -564,7 +564,6 @@ function Index() {
 
 
 
-
                 <div className='d-flex justify-content-center border-radius-50'>
                     <div id='camera-btn' onClick={toggleVideo} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(179,102,249,.9)" }} className=' d-flex justify-content-center align-items-center m-5'>
                         <img style={{ height: "75px", width: "75px" }} src="/icons/camera.png" alt='Camere Button' />
