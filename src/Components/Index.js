@@ -44,18 +44,18 @@ function Index() {
             //         'stun:global.stun.twilio.com:3478'
             //     ]
             // },
-            {
-                urls: 'turn:turn.jami.net',
-                username: 'ring',
-                credential: 'ring'
-            },
+            // {
+            //     urls: 'turn:turn.jami.net',
+            //     username: 'ring',
+            //     credential: 'ring'
+            // },
             // {
             //     urls: 'turn:relay.backups.cz?transport=tcp',
             //     username: 'webrtc',
             //     credential: 'webrtc'
             // }
             {
-                urls: 'turn:192.168.1.184:3478?transport=udp',
+                urls: 'turn:192.168.1.184:3478',
                     username: 'test',
                     credential: 'test123'
             }
