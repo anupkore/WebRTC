@@ -37,13 +37,13 @@ function Index() {
 
     const iceServers = {
         iceServers: [
-            {
-                urls: [
-                    'stun:stun1.l.google.com:19302',
-                    'stun:stun2.l.google.com:19302',
-                    'stun:global.stun.twilio.com:3478'
-                ]
-            },
+            // {
+            //     urls: [
+            //         'stun:stun1.l.google.com:19302',
+            //         'stun:stun2.l.google.com:19302',
+            //         'stun:global.stun.twilio.com:3478'
+            //     ]
+            // },
             // {
             //     urls: 'turn:relay.backups.cz',
             //     username: 'webrtc',
