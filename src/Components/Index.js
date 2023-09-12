@@ -44,15 +44,20 @@ function Index() {
                     'stun:global.stun.twilio.com:3478'
                 ]
             },
+            // {
+            //     urls: 'turn:relay.backups.cz',
+            //     username: 'webrtc',
+            //     credential: 'webrtc'
+            // },
+            // {
+            //     urls: 'turn:relay.backups.cz?transport=tcp',
+            //     username: 'webrtc',
+            //     credential: 'webrtc'
+            // }
             {
-                urls: 'turn:relay.backups.cz',
-                username: 'webrtc',
-                credential: 'webrtc'
-            },
-            {
-                urls: 'turn:relay.backups.cz?transport=tcp',
-                username: 'webrtc',
-                credential: 'webrtc'
+                urls: 'turn:192.168.1.184:3478',
+                    username: 'test',
+                    credential: 'test123'
             }
         ],
         iceCandidatePoolSize: 2
