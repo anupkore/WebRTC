@@ -44,11 +44,11 @@ function Index() {
             //         'stun:global.stun.twilio.com:3478'
             //     ]
             // },
-            // {
-            //     urls: 'turn:relay.backups.cz',
-            //     username: 'webrtc',
-            //     credential: 'webrtc'
-            // },
+            {
+                urls: 'turn:turn.jami.net',
+                username: 'ring',
+                credential: 'ring'
+            },
             // {
             //     urls: 'turn:relay.backups.cz?transport=tcp',
             //     username: 'webrtc',
