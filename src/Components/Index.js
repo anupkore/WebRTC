@@ -55,7 +55,7 @@ function Index() {
             //     credential: 'webrtc'
             // }
             {
-                urls: 'turn:192.168.1.184:3478',
+                urls: 'turn:192.168.0.170:3478',
                     username: 'test',
                     credential: 'test123'
             }
