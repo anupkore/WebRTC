@@ -559,7 +559,7 @@ function Index() {
         
             <div style={{backgroundImage: 'url("https://images.unsplash.com/photo-1668632150893-6bfccb01bdc2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8c3RhcnRzJTIwYXQlMjBuaWdodHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60")'}}>
                 <h1 className="text-center text-light">
-                    Hi WebRTC-Project From Anup.
+                    OneHealth Video Consultation Platform.
                 </h1>
 
                 <div className="d-flex justify-content-center mt-5">
