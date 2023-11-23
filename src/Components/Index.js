@@ -1,18 +1,34 @@
 import 'bootstrap/dist/css/bootstrap.css';
 import { useRef, useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import Stomp from 'stompjs';
 
 function Index() {
 
+    const { myId, remoteId, role } = useParams();
     const localVideo = useRef();
     const remoteVideo = useRef();
-    const localIdInp = useRef();
-    const remoteIdInp = useRef();
+    const [localIdInp,setLocalIdInp] = useState(myId);
+    const [remoteIdInp,setRemoteIdInp] = useState(remoteId);
+
     const [videoEnabled, setVideoEnabled] = useState(true);
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [errorMessage, setErrorMessage] = useState('');
     const [remainder, setRemainder] = useState("");
     const [callInitiated, setCallInitiated] = useState(false);
+    const [join , setJoin] = useState(false);
+
+    const handleSetLocalId = (event)=>{
+        setLocalIdInp(event.target.value);
+        //console.log("Local ID is",localIdInp);
+    }
+
+    const handleSetRemoteId = (event)=>{
+        setRemoteIdInp(event.target.value);
+        //console.log("Remote ID is",remoteIdInp);
+    }
+
+    console.log("Role is",role);
 
 
 
@@ -63,7 +79,8 @@ function Index() {
         iceCandidatePoolSize: 2
     };
     
-
+ 
+    
     localPeer = new RTCPeerConnection(iceServers)
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -99,13 +116,14 @@ function Index() {
 
 
     function handleConnect() {
+        
         // Connect to Websocket Server
-        var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
+        var socket = new WebSocket('wss://web-rtc-server-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
         //var socket = new WebSocket('ws://localhost:8080/websocket');
         stompClient = Stomp.over(socket)
 
 
-        localID = localIdInp.current.value;
+        localID = localIdInp;
         console.log("My ID: " + localID)
         console.log("Step - 1");
 
@@ -123,23 +141,24 @@ function Index() {
 
 
             // Subscribe to call requests
-            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call-request", (callRequest) => {
+            stompClient.subscribe('/user/' + localIdInp + "/topic/call-request", (callRequest) => {
                 const caller = JSON.parse(callRequest.body);
                 const acceptCall = window.confirm(`Incoming call from ${caller}. Accept?`);
                 //const acceptCall = true;
 
                 if (acceptCall) {
-                    stompClient.send("/app/call", {}, JSON.stringify({ "callTo": localIdInp.current.value, "callFrom": caller }))
+                    stompClient.send("/app/call", {}, JSON.stringify({ "callTo": localIdInp, "callFrom": caller }))
                 }
             });
 
 
-            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/call", (call) => {
+            stompClient.subscribe('/user/' + localIdInp + "/topic/call", (call) => {
                 console.log("Step - 2");
                 console.log("Call From: " + call.body)
                 console.log("Step - 3");
+          
                 remoteID = call.body;
-                remoteIdInp.current.value = remoteID;
+                setRemoteIdInp(remoteID);
                 console.log("Remote ID: " + call.body)
 
 
@@ -236,7 +255,7 @@ function Index() {
             ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             //Receiving offers
-            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/offer", async (offer) => {
+            stompClient.subscribe('/user/' + localIdInp + "/topic/offer", async (offer) => {
                 try {
 
                     console.log("Step - 7");
@@ -331,7 +350,7 @@ function Index() {
 
             //Receiving Answers 
 
-            stompClient.subscribe('/user/' + localIdInp.current.value + "/topic/answer", async (answer) => {
+            stompClient.subscribe('/user/' + localIdInp + "/topic/answer", async (answer) => {
                 console.log("Answer Came");
                 try {
                     var object = JSON.parse(answer.body)["answer"];
@@ -351,7 +370,7 @@ function Index() {
 
             //Receiving the candidate information
             
-                stompClient.subscribe("/user/" + localIdInp.current.value + "/topic/candidate", (candidate) => {
+                stompClient.subscribe("/user/" + localIdInp + "/topic/candidate", (candidate) => {
                     console.log("Candidate Came");
                     console.log("Inside /Candidate")
                     var o = JSON.parse(candidate.body)["candidate"];
@@ -385,8 +404,8 @@ function Index() {
 
 
             console.log("Step - 3");
-            stompClient.send("/app/addUser", {}, localIdInp.current.value)
-
+            stompClient.send("/app/addUser", {}, localIdInp)
+           
 
 
             //Frame Ends here
@@ -397,7 +416,7 @@ function Index() {
             })
 
 
-
+             
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -424,8 +443,8 @@ function Index() {
 
     function handleCall() {
         if (stompClient) {
-            remoteID = remoteIdInp.current.value
-            stompClient.send("/app/call-request", {}, JSON.stringify({ "callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value }))
+            remoteID = remoteIdInp
+            stompClient.send("/app/call-request", {}, JSON.stringify({ "callTo": remoteIdInp, "callFrom": localIdInp }))
             //stompClient.send("/app/call", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
             setTimeout(showReminder, 2 * 60 * 1000);
             setTimeout(endCallAutomatically, 3 * 60 * 1000);
@@ -557,27 +576,26 @@ function Index() {
     return (
 
         
-            <div>
-                <h1 className="text-center text-dark">
-                    OneHealth Video Consultation Platform.
-                </h1>
+            <div style={{backgroundColor:"#ccffff",height:"100vh"}}>
+                <h1 className="text-center text-dark">ONEHEALTH</h1>
+                <h2 className="text-center text-dark">Video Consultation Platform</h2>
 
-                <div className="d-flex justify-content-center mt-5">
-                    <video id="localVideo" ref={localVideo} autoPlay muted className='m-2 bg-black' style={{height:"350px",width:"350px"}}></video>
-                    <video id="remoteVideo" ref={remoteVideo} autoPlay className='m-2 bg-black' style={{height:"350px",width:"350px"}}></video>
+                <div className="d-flex justify-content-center mt-4">
+                    <video id="localVideo" ref={localVideo} autoPlay muted className='m-1 bg-black' style={{height:"350px",width:"700px",borderRadius:"20px"}}></video>
+                    <video id="remoteVideo" ref={remoteVideo} autoPlay className='m-1 bg-black' style={{height:"350px",width:"700px",borderRadius:"20px"}}></video>
                 </div>
 
 
 
                 <div className='d-flex justify-content-center border-radius-50'>
-                    <div id='camera-btn' onClick={toggleVideo} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(179,102,249,.9)" }} className=' d-flex justify-content-center align-items-center m-5'>
-                        <img style={{ height: "50px", width: "50px" }} src="/icons/camera.png" alt='Camere Button' />
+                    <div id='camera-btn' onClick={toggleVideo} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(179,102,249,.9)" }} className=' d-flex justify-content-center align-items-center m-2'>
+                        <img style={{ height: "30px", width: "30px" }} src="/icons/camera.png" alt='Camere Button' />
                     </div>
-                    <div id='mic-btn' onClick={toggleAudio} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(179,102,249,.9)" }} className=' d-flex justify-content-center align-items-center m-5'>
-                        <img style={{ height: "50px", width: "50px" }} src="/icons/mic.png" alt='Camera Button' />
+                    <div id='mic-btn' onClick={toggleAudio} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(179,102,249,.9)" }} className=' d-flex justify-content-center align-items-center m-2'>
+                        <img style={{ height: "30px", width: "30px" }} src="/icons/mic.png" alt='Camera Button' />
                     </div>
-                    <div id='leave-btn' onClick={handleLeave} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "red" }} className=' d-flex justify-content-center align-items-center m-5'>
-                        <img style={{ height: "50px", width: "50px" }} src="/icons/phone.png" alt='Camera Button' />
+                    <div id='leave-btn' onClick={handleLeave} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "red" }} className=' d-flex justify-content-center align-items-center m-2'>
+                        <img style={{ height: "30px", width: "30px" }} src="/icons/phone.png" alt='Camera Button' />
                     </div>
                 </div>
 
@@ -585,14 +603,14 @@ function Index() {
 
 
                 {!callInitiated && (
-                    <div className='d-flex justify-content-center mt-5'>
+                    <div className='d-flex justify-content-center'>
                         <div>
-                            <input type="text" name="localId" id="localId" ref={localIdInp} placeholder="Enter Your ID" className='h-50 border-dark'></input>
-                            <button id="connectBtn" className='btn btn-primary m-3' onClick={handleConnect}>Connect</button>
+                            {/* <input type="text" name="localId" id="localId" onChange={handleSetLocalId} value={localIdInp} placeholder="Enter Your ID" className='h-50 border-dark'></input> */}
+                            <button id="connectBtn" className='btn btn-primary m-3' onClick={handleConnect} >Join Now</button>
                         </div>
                         <div>
-                            <input type="text" name="remoteId" id="remoteId" ref={remoteIdInp} placeholder="Enter Remote ID" className='h-50 border-dark'></input>
-                            <button id="callBtn" className='btn btn-success m-3' onClick={handleCall}>Call</button>
+                            {/* <input type="text" name="remoteId" id="remoteId" onChange={handleSetRemoteId} value={remoteIdInp} placeholder="Enter Remote ID" className='h-50 border-dark'></input> */}
+                            <button id="callBtn" className='btn btn-success m-3' onClick={handleCall} >Call</button>
                         </div>
                     </div>
                 )}
