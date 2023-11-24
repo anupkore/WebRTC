@@ -16,7 +16,8 @@ function Index() {
     const [errorMessage, setErrorMessage] = useState('');
     const [remainder, setRemainder] = useState("");
     const [callInitiated, setCallInitiated] = useState(false);
-    const [join , setJoin] = useState(false);
+    const [join , setJoin] = useState(true);
+    const [connectClicked , setConnectClicked] = useState(false);
 
     const handleSetLocalId = (event)=>{
         setLocalIdInp(event.target.value);
@@ -113,30 +114,25 @@ function Index() {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-    function handleConnect() {
+    useEffect(()=>{
         
-        // Connect to Websocket Server
-        var socket = new WebSocket('wss://web-rtc-server-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
-        //var socket = new WebSocket('ws://localhost:8080/websocket');
-        stompClient = Stomp.over(socket)
+        if(connectClicked)
+        {
+            var socket = new WebSocket('wss://web-rtc-server-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
+            //var socket = new WebSocket('ws://localhost:8080/websocket');
+            stompClient = Stomp.over(socket)
 
 
-        localID = localIdInp;
-        console.log("My ID: " + localID)
-        console.log("Step - 1");
+            localID = localIdInp;
+            console.log("My ID: " + localID)
+            console.log("Step - 1");
 
+            stompClient.connect({}, frame => {
 
-        stompClient.connect({}, frame => {
-
-            console.log(frame)
-
-
-            // Subscribe to testing URL not very important
-            const testServerSubscription = stompClient.subscribe('/topic/testServer', function (test) {
-                console.log('Received: ' + test.body);
-            });
+                console.log(frame)
+                const testServerSubscription = stompClient.subscribe('/topic/testServer', function (test) {
+                    console.log('Received: ' + test.body);
+                });
             subscriptions.push(testServerSubscription);
 
 
@@ -387,6 +383,7 @@ function Index() {
     
                     console.log("Adding iceCandidate")
                     setCallInitiated(true);
+                    
                     // Add the ice candidate to the peer connection
                     localPeer.addIceCandidate(iceCandidate);
                 });
@@ -409,13 +406,23 @@ function Index() {
 
 
             //Frame Ends here
+            }
+                , error => {
+                    console.error('Error connecting to WebSocket server:', error);
+                    window.alert('Error connecting to WebSocket server');
+                })
+
+
         }
-            , error => {
-                console.error('Error connecting to WebSocket server:', error);
-                window.alert('Error connecting to WebSocket server');
-            })
+        else{
+            console.log("Stomp Clent Not Connected")
+        }
+    },[connectClicked , join])
 
-
+    function handleConnect() {
+        
+        setConnectClicked(true);
+        setJoin(false);
              
     }
 
@@ -472,7 +479,8 @@ function Index() {
     function handleLeave() {
         clearTimeout(showReminder);
         clearTimeout(endCallAutomatically);
-        if (stompClient) {
+        if (stompClient) 
+        {
             stompClient.send("/app/leave", {}, localID);
             hideVideos();
 
@@ -480,8 +488,14 @@ function Index() {
             stompClient.disconnect(() => {
                 console.log('STOMP client disconnected');
             });
-
-            window.location.href = "/test";
+            if(role === "Doctor")
+            {
+                window.location.href = "/test";
+            }
+            else{
+                window.location.href = "/test";
+            }
+            
         } else {
             window.location.href = "/test";
         }
@@ -604,13 +618,13 @@ function Index() {
 
                 {!callInitiated && (
                     <div className='d-flex justify-content-center'>
-                        <div>
+                        <div style={{display: join? "block":"none"}}>
                             {/* <input type="text" name="localId" id="localId" onChange={handleSetLocalId} value={localIdInp} placeholder="Enter Your ID" className='h-50 border-dark'></input> */}
-                            <button id="connectBtn" className='btn btn-primary m-3' onClick={handleConnect} >Join Now</button>
+                            <button id="connectBtn" className='btn btn-primary m-3' onClick={handleConnect}>Join Now</button>
                         </div>
-                        <div>
+                        <div style={{display: join? "none":"block"}}>
                             {/* <input type="text" name="remoteId" id="remoteId" onChange={handleSetRemoteId} value={remoteIdInp} placeholder="Enter Remote ID" className='h-50 border-dark'></input> */}
-                            <button id="callBtn" className='btn btn-success m-3' onClick={handleCall} >Call</button>
+                            <button id="callBtn" className='btn btn-success m-3' onClick={handleCall}>Call</button>
                         </div>
                     </div>
                 )}
