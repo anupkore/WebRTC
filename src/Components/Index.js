@@ -496,9 +496,13 @@ function Index() {
                 window.location.href = "http://192.168.1.206:30091/dashboard/appointments";
             }
             
-        } else {
-            window.location.href = "/test";
+        } else if(role === "Doctor") {
+            window.location.href = "http://192.168.1.206:30092/app";
         }
+        else{
+            window.location.href = "http://192.168.1.206:30091/dashboard/appointments";
+        }
+        
 
     }
 
