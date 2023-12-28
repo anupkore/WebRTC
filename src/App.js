@@ -9,6 +9,7 @@ function App() {
     <>
       <Router>
           <Routes>
+            <Route path="/" element={<Test/>} />
             <Route path="/:myId/:remoteId/:role" element={<Index/>} />
             <Route path="/test" element={<Test/>} />
           </Routes>
