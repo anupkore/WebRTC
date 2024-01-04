@@ -1,6 +1,8 @@
 import 'bootstrap/dist/css/bootstrap.css';
 import { useRef, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import 'react-toastify/dist/ReactToastify.css';
+import RecordRTC from 'recordrtc';
 import Stomp from 'stompjs';
 
 function Index() {
@@ -8,6 +10,8 @@ function Index() {
     const { myId, remoteId, role } = useParams();
     const localVideo = useRef();
     const remoteVideo = useRef();
+    const canvasRef = useRef(null);
+
 
     const [videoEnabled, setVideoEnabled] = useState(true);
     const [audioEnabled, setAudioEnabled] = useState(true);
@@ -18,7 +22,10 @@ function Index() {
     const [connectClicked , setConnectClicked] = useState(false);
     const [patientJoined , setPatientJoined] = useState(false);
     const [patientAlreadyJoined , setPatientAlreadyJoined] = useState(false);
-
+    const [personLeft , setPersonLeft] = useState(false);
+    const [leaveClicked , setLeaveClicked] = useState(false);
+    const [localRecorder, setLocalRecorder] = useState(null);
+    const [remoteRecorder, setRemoteRecorder] = useState(null);
 
     const [localStream, setLocalStream] = useState(null);
     let remoteStream;
@@ -113,11 +120,11 @@ function Index() {
 
     useEffect(()=>{
         if(connectClicked){
-            var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
-            //var socket = new WebSocket('ws://localhost:8080/websocket');
+            //var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
+            var socket = new WebSocket('ws://localhost:8080/websocket');
             stompClient = Stomp.over(socket);
         }
-    },[connectClicked,patientAlreadyJoined,patientJoined])
+    },[connectClicked,patientAlreadyJoined,patientJoined,personLeft,leaveClicked])
     
     
     function callRequestSubscription(){
@@ -131,7 +138,6 @@ function Index() {
             }
         });
     }
-
 
     function callSubscription(){
         stompClient.subscribe('/user/' + myId + "/topic/call", (call) => {
@@ -315,6 +321,16 @@ function Index() {
 
 }
 
+    function callEndedSubscription(){
+        stompClient.subscribe('/user/' + myId + "/topic/callEnded", (object) => {
+        console.log(object.body);
+        setPersonLeft(true);
+        setTimeout(() => {
+            handleLeave();
+        },10000);
+    });
+    }
+
     function sendCandidate_1(call){
         localPeer.onicecandidate = (event) => {
             try {
@@ -382,6 +398,11 @@ function Index() {
                 candidateSubscription();
                 remainderSubscription();
                 notification();
+                callEndedSubscription();
+
+                if(leaveClicked){
+                    sendLeaveRequest();
+                }
 
                 const ids = { myId: myId, remoteId: remoteId,  role: role };
                 stompClient.send("/app/addUser", {}, JSON.stringify(ids));
@@ -397,13 +418,9 @@ function Index() {
             console.log("Stomp Clent Not Connected")
         }
         console.log("first connection");
-    },[connectClicked])
+    },[connectClicked,leaveClicked])
 
-    
-    
-    
-    
-    
+ 
     function handleConnect() 
     {
         setConnectClicked(true);
@@ -440,13 +457,32 @@ function Index() {
         if (stompClient) {
             stompClient.send("/app/call-request", {}, JSON.stringify({ "callTo": remoteId, "callFrom": myId }))
             //stompClient.send("/app/call", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
-            setTimeout(showReminder, 2 * 60 * 1000);
-            setTimeout(endCallAutomatically, 3 * 60 * 1000);
+            //setTimeout(showReminder, 2 * 60 * 1000);
+            setTimeout(endCallAutomatically, 10 * 60 * 1000);
         } else {
             setErrorMessage("Stomp is not available");
             window.alert("User Already Busy in Another Call");
         }
 
+    }
+
+    function sendLeaveRequest(){
+        if (stompClient) 
+        {
+            const ids = { myId: myId, remoteId: remoteId};
+            stompClient.send("/app/leave", {},JSON.stringify(ids) );
+
+            // Disconnect the WebSocket connection
+            stompClient.disconnect(() => {
+                console.log('STOMP client disconnected');
+            });
+            if(role === "Doctor")
+            {
+                window.location.href = "http://192.168.1.206:30092/app";
+            }else{
+                window.location.href = "http://192.168.1.206:30091/dashboard/appointments";
+            }
+        }
     }
 
 
@@ -456,35 +492,11 @@ function Index() {
 
 
     function handleLeave() {
+        setLeaveClicked(true);
+        console.log("Leave button clicked");
         clearTimeout(showReminder);
         clearTimeout(endCallAutomatically);
-        //setUserJoined(false);
-        if (stompClient) 
-        {
-            stompClient.send("/app/leave", {}, myId);
-            hideVideos();
-
-            // Disconnect the WebSocket connection
-            stompClient.disconnect(() => {
-                console.log('STOMP client disconnected');
-            });
-            if(role === "Doctor")
-            {
-                window.location.href = "http://192.168.1.206:30092/app";
-            }
-            else{
-                window.location.href = "http://192.168.1.206:30091/dashboard/appointments";
-            }
-            
-        } 
-        // else if(role === "Doctor") {
-        //     window.location.href = "http://192.168.1.206:30092/app";
-        // }
-        // else{
-        //     window.location.href = "http://192.168.1.206:30091/dashboard/appointments";
-        // }
-        
-
+        hideVideos();
     }
 
 
@@ -576,9 +588,104 @@ function Index() {
     }, []);
 
 
+    const startRecording = (mediaStream, setRecorder) => {
+        const recorder = RecordRTC(mediaStream, {
+          type: 'video',
+          videoBitsPerSecond: 100000,
+          audio: true,
+        });
     
+        recorder.startRecording();
     
+        setRecorder(recorder);
+      };
 
+      const stopRecording = (recorder) => {
+        if (recorder) {
+          recorder.stopRecording(() => {
+            const blob = recorder.getBlob();
+            // Handle the blob (e.g., save it, download it)
+            console.log(blob);
+            
+          });
+        }
+      };
+
+      const downloadLocalBlob = (localBlob) => {
+        const url = URL.createObjectURL(localBlob);
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.style = 'display: none';
+        a.href = url;
+        a.download = `local_video_${Date.now()}.webm`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      };
+      
+      const downloadRemoteBlob = (remoteBlob) => {
+        const url = URL.createObjectURL(remoteBlob);
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.style = 'display: none';
+        a.href = url;
+        a.download = `remote_video_${Date.now()}.webm`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      };
+      
+      const handleDownload = async () => {
+        if (localRecorder && remoteRecorder) {
+          const localBlob = localRecorder.getBlob();
+          const remoteBlob = remoteRecorder.getBlob();
+          console.log("Local Video Blob Size is: " + localRecorder)
+          console.log("Remote Video Blob Size is: " + remoteRecorder)
+        
+          const formData = new FormData();
+        formData.append('localVideo', localBlob);
+        formData.append('remoteVideo', remoteBlob);
+ 
+        const response = await fetch('http://localhost:8081/side', {
+            method: 'POST',
+            body: formData,
+        });
+
+        console.log(response);
+ 
+        if (response.ok) {
+            const blob = await response.blob();
+            console.log("Merged Video size is"+blob.size)
+            const url = URL.createObjectURL(blob);
+   
+            // Create a link and trigger a download
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Date ${new Date().toISOString()} merged_video.webm`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } else {
+            // Handle errors
+            console.error('Error merging videos:', response.statusText);
+        }
+          
+        //downloadLocalBlob(localBlob);
+        //downloadRemoteBlob(remoteBlob);
+        }
+      };
+      
+    
+      const handleStartRecording = () => {
+        startRecording(localVideo.current.srcObject, setLocalRecorder);
+        startRecording(remoteVideo.current.srcObject, setRemoteRecorder);
+      };
+      
+      const handleStopRecording = () => {
+        stopRecording(localRecorder);
+        stopRecording(remoteRecorder);
+      };
+      
+
+
+    
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -588,50 +695,66 @@ function Index() {
     return (
 
         
-            <div style={{backgroundColor:"#ccffff",height:"100vh"}}>
-                <h1 className="text-center text-dark">ONEHEALTH</h1>
-                <h2 className="text-center text-dark">Video Consultation Platform</h2>
+            <div style={{backgroundImage: `url(https://img.freepik.com/premium-vector/technology-background-web-connection-background-connection-background_759274-328.jpg?w=1060)`,backgroundSize:"cover", filter:"blur"}}>
+                <h1 className="text-center text-dark">Aarogya-Mandi</h1>
+                <h5 className="text-center text-dark">Video Consultation Platform</h5>
 
 
                 {role === "Doctor" && connectClicked && !callInitiated &&
+
                 <div className='text-center'>
-                    {patientAlreadyJoined?
-                    <h3 className='text-success'>Patient is waiting for your call</h3>
-                    :<h3 className='text-danger'>Patient is yet to join. Please wait </h3>}
+                    <div className='text-center p-3 mb-1 bg-white rounded w-50 mx-auto mt-3'>
+                        {patientAlreadyJoined?
+                        <h4 className='text-success'>Patient Has Joined And Waiting For Your Call</h4>
+                        :<h5 className='text-danger'>Please Wait For Patient To Join</h5>
+                        }
+                    </div>
                 </div>
                 }
 
                 {role === "Patient" && connectClicked && !callInitiated &&
-                <div className='text-center'>
-                    <h3 className='text-dark'>Please Wait For Doctor's Call</h3>
+                <div className='text-center p-3 mb-5 bg-white rounded w-50 mx-auto mt-3'>
+                    <h5 className='text-success'>Doctor Will Call Shortly. Please Wait</h5>
+                </div>
+                }
+
+                {role === "Doctor" && personLeft &&
+                <div className='text-center p-3 mb-5 bg-white rounded w-50 mx-auto mt-3'>
+                    <h5 className='text-danger'>Patient Has Left The Call , Redirecting To The Dashboard...</h5>
+                </div>
+                }
+
+                {role === "Patient" && personLeft &&
+                <div className='text-center p-3 mb-5 bg-white rounded w-50 mx-auto mt-3'>
+                    <h5 className='text-danger'>Doctor Has Left The Call , Redirecting To The Dashboard...</h5>
                 </div>
                 }
                  
-                <div className="d-flex justify-content-center mt-4">
+                <div className="d-flex justify-content-center mt-1">
                     <div>
-                        <h3 className='text-center'>You</h3>
-                        <video id="localVideo" ref={localVideo} autoPlay muted className='m-1 bg-black' style={{height:"350px",width:"700px",borderRadius:"20px"}}></video>
+                        <h5 className='text-center'>You</h5>
+                        <video id="localVideo" ref={localVideo} autoPlay muted className='m-1 bg-black' style={{height:"350px",width:"650px",borderRadius:"20px"}}></video>
                     </div>
 
                     <div>
                         {role === "Doctor" && 
-                            <h3 className='text-center'>Patient</h3>
+                            <h5 className='text-center'>Patient</h5>
                         }
                         {role === "Patient" && 
-                            <h3 className='text-center'>Doctor</h3>
+                            <h5 className='text-center'>Doctor</h5>
                         }
                         
-                        <video id="remoteVideo" ref={remoteVideo} autoPlay className='m-1 bg-black' style={{height:"350px",width:"700px",borderRadius:"20px"}}></video>
+                        <video id="remoteVideo" ref={remoteVideo} autoPlay className='m-1 bg-black' style={{height:"350px",width:"650px",borderRadius:"20px"}}></video>
                     </div>
                 </div>
 
 
 
                 <div className='d-flex justify-content-center border-radius-50'>
-                    <div id='camera-btn' onClick={toggleVideo} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(179,102,249,.9)" }} className=' d-flex justify-content-center align-items-center m-2'>
+                    <div id='camera-btn' onClick={toggleVideo} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(150,20,249,.9)" }} className=' d-flex justify-content-center align-items-center m-2'>
                         <img style={{ height: "30px", width: "30px" }} src="/icons/camera.png" alt='Camere Button' />
                     </div>
-                    <div id='mic-btn' onClick={toggleAudio} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(179,102,249,.9)" }} className=' d-flex justify-content-center align-items-center m-2'>
+                    <div id='mic-btn' onClick={toggleAudio} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(150,20,249,.9)" }} className=' d-flex justify-content-center align-items-center m-2'>
                         <img style={{ height: "30px", width: "30px" }} src="/icons/mic.png" alt='Camera Button' />
                     </div>
                     <div id='leave-btn' onClick={handleLeave} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "red" }} className=' d-flex justify-content-center align-items-center m-2'>
@@ -669,7 +792,13 @@ function Index() {
                 </div> */}
 
 
-
+                {callInitiated && role === "Doctor" &&
+                    <div className='text-center'>
+                        <button className='btn btn-primary m-3' onClick={handleStartRecording}>Start Recording</button>
+                        <button className='btn btn-primary m-3' onClick={handleStopRecording}>Stop Recording</button>
+                        <button className='btn btn-success m-3' onClick={handleDownload}>Download Videos</button>
+                    </div>
+                }
             </div>
         
     );
