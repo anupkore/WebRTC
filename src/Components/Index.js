@@ -120,9 +120,9 @@ function Index() {
 
     useEffect(()=>{
         if(connectClicked){
-            //var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
+            var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
             //var socket = new WebSocket('ws://localhost:8080/websocket');
-            var socket = new WebSocket('ws://192.168.1.206:30030/websocket');
+            //var socket = new WebSocket('ws://192.168.1.206:30030/websocket');
             stompClient = Stomp.over(socket);
         }
     },[connectClicked,patientAlreadyJoined,patientJoined,personLeft,leaveClicked])
