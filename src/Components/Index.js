@@ -45,11 +45,11 @@ function Index() {
             //         'stun:global.stun.twilio.com:3478'
             //     ]
             // },
-            // {
-            //     urls: 'turn:turn.jami.net',
-            //     username: 'ring',
-            //     credential: 'ring'
-            // },
+            {
+                urls: 'turn:turn.jami.net',
+                username: 'ring',
+                credential: 'ring'
+            },
             {
                 urls: 'stun:192.168.0.170:3478',
                 username: 'test',
@@ -121,7 +121,8 @@ function Index() {
     useEffect(()=>{
         if(connectClicked){
             //var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
-            var socket = new WebSocket('ws://localhost:8080/websocket');
+            //var socket = new WebSocket('ws://localhost:8080/websocket');
+            var socket = new WebSocket('ws://192.168.1.206:30030/websocket');
             stompClient = Stomp.over(socket);
         }
     },[connectClicked,patientAlreadyJoined,patientJoined,personLeft,leaveClicked])
@@ -458,7 +459,7 @@ function Index() {
             stompClient.send("/app/call-request", {}, JSON.stringify({ "callTo": remoteId, "callFrom": myId }))
             //stompClient.send("/app/call", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
             //setTimeout(showReminder, 2 * 60 * 1000);
-            setTimeout(endCallAutomatically, 10 * 60 * 1000);
+            setTimeout(endCallAutomatically, 15 * 60 * 1000);
         } else {
             setErrorMessage("Stomp is not available");
             window.alert("User Already Busy in Another Call");
@@ -644,7 +645,7 @@ function Index() {
         formData.append('localVideo', localBlob);
         formData.append('remoteVideo', remoteBlob);
  
-        const response = await fetch('http://localhost:8081/side', {
+        const response = await fetch('http://192.168.1.206:30031/side', {
             method: 'POST',
             body: formData,
         });
