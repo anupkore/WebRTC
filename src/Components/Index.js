@@ -10,8 +10,6 @@ function Index() {
     const { myId, remoteId, role } = useParams();
     const localVideo = useRef();
     const remoteVideo = useRef();
-    const canvasRef = useRef(null);
-
 
     const [videoEnabled, setVideoEnabled] = useState(true);
     const [audioEnabled, setAudioEnabled] = useState(true);
@@ -26,6 +24,11 @@ function Index() {
     const [leaveClicked , setLeaveClicked] = useState(false);
     const [localRecorder, setLocalRecorder] = useState(null);
     const [remoteRecorder, setRemoteRecorder] = useState(null);
+    const [recordingStarted, setRecordingStarted] = useState(false);
+    const [recordingTextVisible, setRecordingTextVisible] = useState(false);
+    const [recordClicked , setRecordClicked] = useState(false);
+    const [recordingStopped , setRecordingStopped] = useState(false);
+    const [recordButtonDisplay , setRecordButtonDisplay] = useState(false);
 
     const [localStream, setLocalStream] = useState(null);
     let remoteStream;
@@ -99,6 +102,64 @@ function Index() {
     
     
     useEffect(()=>{
+        if(connectClicked){
+            var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
+            //var socket = new WebSocket('ws://localhost:8080/websocket');
+            //var socket = new WebSocket('ws://192.168.1.206:30030/websocket');
+            stompClient = Stomp.over(socket);
+        }
+    },[connectClicked,patientAlreadyJoined,patientJoined,personLeft,leaveClicked,recordClicked,recordingStopped])
+    
+
+    useEffect(()=>{
+        
+        if(connectClicked)
+        {
+            
+            stompClient.connect({}, frame => {
+
+                callRequestSubscription();
+                callSubscription();
+                offerSubscription();
+                answerSubscription();
+                candidateSubscription();
+                remainderSubscription();
+                notification();
+                callEndedSubscription();
+                recordRequestSubscription();
+                recordRequestAcceptanceSubscription();
+                recordingStoppedSubscription();
+                
+                if(leaveClicked){
+                    sendLeaveRequest();
+                }
+
+                if(recordClicked){
+                    sendRecordRequest();
+                }
+
+                if(recordingStopped){
+                    sendRecordingStoppedMessage();
+                }
+
+                const ids = { myId: myId, remoteId: remoteId,  role: role };
+                stompClient.send("/app/addUser", {}, JSON.stringify(ids));
+            }
+                , error => {
+                    console.error('Error connecting to WebSocket server:', error);
+                    window.alert('Error connecting to WebSocket server');
+                })
+
+
+        }
+        else{
+            console.log("Stomp Clent Not Connected")
+        }
+        console.log("first connection");
+    },[connectClicked,leaveClicked,recordClicked,recordingStopped])
+
+
+    useEffect(()=>{
         //Setting remote video stream to remote video div
         localPeer.ontrack = (event) => {
             try {
@@ -117,17 +178,10 @@ function Index() {
 
     },[join])
 
+    
 
-    useEffect(()=>{
-        if(connectClicked){
-            var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
-            //var socket = new WebSocket('ws://localhost:8080/websocket');
-            //var socket = new WebSocket('ws://192.168.1.206:30030/websocket');
-            stompClient = Stomp.over(socket);
-        }
-    },[connectClicked,patientAlreadyJoined,patientJoined,personLeft,leaveClicked])
-    
-    
+
+
     function callRequestSubscription(){
         stompClient.subscribe('/user/' + myId + "/topic/call-request", (callRequest) => {
             const caller = JSON.parse(callRequest.body);
@@ -384,43 +438,6 @@ function Index() {
             setErrorMessage("Error creating offer");
         });
     }
-
-    useEffect(()=>{
-        
-        if(connectClicked)
-        {
-            
-            stompClient.connect({}, frame => {
-
-                callRequestSubscription();
-                callSubscription();
-                offerSubscription();
-                answerSubscription();
-                candidateSubscription();
-                remainderSubscription();
-                notification();
-                callEndedSubscription();
-
-                if(leaveClicked){
-                    sendLeaveRequest();
-                }
-
-                const ids = { myId: myId, remoteId: remoteId,  role: role };
-                stompClient.send("/app/addUser", {}, JSON.stringify(ids));
-            }
-                , error => {
-                    console.error('Error connecting to WebSocket server:', error);
-                    window.alert('Error connecting to WebSocket server');
-                })
-
-
-        }
-        else{
-            console.log("Stomp Clent Not Connected")
-        }
-        console.log("first connection");
-    },[connectClicked,leaveClicked])
-
  
     function handleConnect() 
     {
@@ -432,9 +449,7 @@ function Index() {
     function endCallAutomatically() {
         console.log('Call ended automatically.');
         handleLeave();
-    }
-
-    
+    }    
     
     function showReminder() {
         console.log('1 minutes remaining!');
@@ -449,9 +464,6 @@ function Index() {
             stompClient.send("/app/sendMessage", {}, JSON.stringify(reminderMessage));
         }
     }
-
-
-
 
     function handleCall() {
 
@@ -486,6 +498,62 @@ function Index() {
         }
     }
 
+    function handleRecordClicked(){
+        setRecordClicked(true);
+    }
+
+    function sendRecordRequest(){
+        if(stompClient){
+            console.log("Sending Call Record Request");
+            const details = {"toUser":remoteId , "fromUser":myId}
+            stompClient.send("/app/recordRequest",{},JSON.stringify(details))
+        }
+        else{
+            console.log("StompClient does not exist");
+        }
+    }
+
+    function sendRecordingStoppedMessage(){
+        if(stompClient){
+            console.log("Sending recording stopped message");
+            const details = {"toUser":remoteId}
+            stompClient.send("/app/recordingStopped",{},JSON.stringify(details))
+        }
+        else{
+            console.log("StompClient does not exist");
+        }
+    }
+
+    function recordRequestSubscription(){
+        stompClient.subscribe('/user/' + myId + "/topic/recordRequest", (callRecordRequest) => {
+            const caller = JSON.parse(callRecordRequest.body);
+            const acceptRecordCall = window.confirm(`Doctor wants to record this call for future reference.  Accept?`);
+
+            if (acceptRecordCall) {
+                setRecordingStarted(true);
+                setRecordingTextVisible(true);
+                const id = {"toUser":remoteId};
+                stompClient.send("/app/recordRequestAcceptance",{},JSON.stringify(id))
+            }
+        });
+    }
+
+    function recordRequestAcceptanceSubscription(){                                                                                                                                        
+        stompClient.subscribe('/user/' + myId + "/topic/recordRequestAcceptance", (callRecordRequestAcceptance) => {
+            console.log(callRecordRequestAcceptance.body);
+            setRecordButtonDisplay(true);
+            handleStartRecording();
+        });
+    }
+
+    function recordingStoppedSubscription(){
+        stompClient.subscribe('/user/' + myId + "/topic/recordingStopped", (message) => {
+            console.log("Recording Stopped Message is : "+message.body);
+            setRecordingStarted(false);
+            setRecordingTextVisible(false);
+            setRecordingStopped(false);
+        });
+    }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -499,8 +567,6 @@ function Index() {
         clearTimeout(endCallAutomatically);
         hideVideos();
     }
-
-
 
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -570,7 +636,7 @@ function Index() {
         }
     }
     
-    // Attach the event listener to the window
+
     useEffect(() => {
         const handleBeforeUnload = () => {
             setTimeout(() => {
@@ -597,8 +663,10 @@ function Index() {
         });
     
         recorder.startRecording();
-    
+
         setRecorder(recorder);
+        setRecordingStarted(true);
+        setRecordingTextVisible(true);
       };
 
       const stopRecording = (recorder) => {
@@ -606,10 +674,13 @@ function Index() {
           recorder.stopRecording(() => {
             const blob = recorder.getBlob();
             // Handle the blob (e.g., save it, download it)
-            console.log(blob);
-            
+            console.log(blob); 
           });
         }
+        setRecordingStarted(false);
+        setRecordingTextVisible(false);
+        setRecordClicked(false);
+        setRecordingStopped(true);
       };
 
       const downloadLocalBlob = (localBlob) => {
@@ -645,7 +716,7 @@ function Index() {
         formData.append('localVideo', localBlob);
         formData.append('remoteVideo', remoteBlob);
  
-        const response = await fetch('http://192.168.1.206:30031/side', {
+        const response = await fetch('https://192.168.1.206:30031/side', {
             method: 'POST',
             body: formData,
         });
@@ -684,7 +755,26 @@ function Index() {
         stopRecording(remoteRecorder);
       };
       
+      const blinkingDotStyle = {
+        width: '10px',
+        height: '10px',
+        backgroundColor: 'red',
+        borderRadius: '50%',
+        display: 'inline-block',
+        marginRight: '5px',
+        animation: 'blinkDot 1s infinite',
+    };
 
+    const keyframes = `@keyframes blinkDot {
+        0% { opacity: 1; }
+        50% { opacity: 0; }
+        100% { opacity: 1; }
+    }
+`;
+
+    // Apply the keyframes to the document's styles
+    const styleSheet = document.styleSheets[0];
+    styleSheet.insertRule(keyframes, styleSheet.cssRules.length);
 
     
 
@@ -720,16 +810,32 @@ function Index() {
                 }
 
                 {role === "Doctor" && personLeft &&
-                <div className='text-center p-3 mb-5 bg-white rounded w-50 mx-auto mt-3'>
+                <div className='text-center p-3 bg-white rounded w-50 mx-auto mt-3'>
                     <h5 className='text-danger'>Patient Has Left The Call , Redirecting To The Dashboard...</h5>
                 </div>
                 }
 
                 {role === "Patient" && personLeft &&
-                <div className='text-center p-3 mb-5 bg-white rounded w-50 mx-auto mt-3'>
+                <div className='text-center p-3 bg-white rounded w-50 mx-auto mt-3'>
                     <h5 className='text-danger'>Doctor Has Left The Call , Redirecting To The Dashboard...</h5>
                 </div>
                 }
+
+                {/* {recordingStarted &&
+                <div className='text-center mt-3'>
+                   <h5 className='text-danger'>Recording</h5> 
+                </div>
+                } */}
+
+                {recordingStarted && (
+                    <div className='text-center mt-3 d-flex justify-content-center'>
+                        <div className='mt-2' style={blinkingDotStyle}></div>
+                        <h5 className='text-danger'>
+                            <span className={`blinking-text ${recordingTextVisible ? 'visible' : 'hidden'}`}>Recording Started</span>
+                        </h5>
+                        
+                    </div>
+                )}
                  
                 <div className="d-flex justify-content-center mt-1">
                     <div>
@@ -773,7 +879,7 @@ function Index() {
                             <button id="connectBtn" className='btn btn-primary m-3' onClick={handleConnect}>Join Now</button>
                         </div>
 
-                        {role === "Doctor" &&
+                        {role === "Doctor" && patientAlreadyJoined &&
                         <div style={{display: join? "none":"block"}}>
                             {/* <input type="text" name="remoteId" id="remoteId" onChange={handleSetRemoteId} value={remoteIdInp} placeholder="Enter Remote ID" className='h-50 border-dark'></input> */}
                             <button id="callBtn" className='btn btn-success m-3' onClick={handleCall}>Call</button>
@@ -795,9 +901,17 @@ function Index() {
 
                 {callInitiated && role === "Doctor" &&
                     <div className='text-center'>
-                        <button className='btn btn-primary m-3' onClick={handleStartRecording}>Start Recording</button>
+                        {recordButtonDisplay && !recordingStopped &&
                         <button className='btn btn-primary m-3' onClick={handleStopRecording}>Stop Recording</button>
+                        }
+
+                        {!recordButtonDisplay && !recordingStopped &&
+                        <button className='btn btn-primary m-3' onClick={handleRecordClicked}>Start Recording</button>
+                        }
+
+                        {recordingStopped &&
                         <button className='btn btn-success m-3' onClick={handleDownload}>Download Videos</button>
+                        }
                     </div>
                 }
             </div>
