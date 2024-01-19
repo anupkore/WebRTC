@@ -103,9 +103,9 @@ function Index() {
     
     useEffect(()=>{
         if(connectClicked){
-            var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
+            //var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
             //var socket = new WebSocket('ws://localhost:8080/websocket');
-            //var socket = new WebSocket('ws://192.168.1.206:30030/websocket');
+            var socket = new WebSocket('wss://192.168.1.206:30030/websocket');
             stompClient = Stomp.over(socket);
         }
     },[connectClicked,patientAlreadyJoined,patientJoined,personLeft,leaveClicked,recordClicked,recordingStopped])
@@ -584,7 +584,7 @@ function Index() {
         }
         else {
             videoTrack.enabled = true;
-            document.getElementById('camera-btn').style.backgroundColor = "rgb(179,102,249,.9)";
+            document.getElementById('camera-btn').style.backgroundColor = "rgb(150,20,249,.9)";
         }
     };
 
@@ -598,7 +598,7 @@ function Index() {
         }
         else {
             audioTrack.enabled = true;
-            document.getElementById('mic-btn').style.backgroundColor = "rgb(179,102,249,.9)";
+            document.getElementById('mic-btn').style.backgroundColor = "rgb(150,20,249,.9)";
         }
     };
 
@@ -787,8 +787,19 @@ function Index() {
 
         
             <div style={{backgroundImage: `url(https://img.freepik.com/premium-vector/technology-background-web-connection-background-connection-background_759274-328.jpg?w=1060)`,backgroundSize:"cover", filter:"blur"}}>
-                <h1 className="text-center text-dark">Aarogya-Mandi</h1>
-                <h5 className="text-center text-dark">Video Consultation Platform</h5>
+                
+                <div className='text-center'>
+                    <img src="http://192.168.1.206:30092/favicon/apple-touch-icon.png" style={{"width":"300px","height":"80px"}}/>
+                    <h5 className="text-dark">Video Consultation Platform</h5>
+                </div>
+
+
+                {!connectClicked &&
+                <div className='text-center mt-3'>
+                    <h5 className='text-success'>Please Click On Join Now Button To Start A Call</h5>
+                </div>
+                }
+
 
 
                 {role === "Doctor" && connectClicked && !callInitiated &&
@@ -796,7 +807,7 @@ function Index() {
                 <div className='text-center'>
                     <div className='text-center p-3 mb-1 bg-white rounded w-50 mx-auto mt-3'>
                         {patientAlreadyJoined?
-                        <h4 className='text-success'>Patient Has Joined And Waiting For Your Call</h4>
+                        <h5 className='text-success'>Patient Has Joined And Waiting For Your Call</h5>
                         :<h5 className='text-danger'>Please Wait For Patient To Join</h5>
                         }
                     </div>
@@ -804,7 +815,7 @@ function Index() {
                 }
 
                 {role === "Patient" && connectClicked && !callInitiated &&
-                <div className='text-center p-3 mb-5 bg-white rounded w-50 mx-auto mt-3'>
+                <div className='text-center p-3 mb-1 bg-white rounded w-50 mx-auto mt-3'>
                     <h5 className='text-success'>Doctor Will Call Shortly. Please Wait</h5>
                 </div>
                 }
