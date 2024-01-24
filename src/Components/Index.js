@@ -789,7 +789,8 @@ function Index() {
             <div style={{backgroundImage: `url(https://img.freepik.com/premium-vector/technology-background-web-connection-background-connection-background_759274-328.jpg?w=1060)`,backgroundSize:"cover", filter:"blur"}}>
                 
                 <div className='text-center'>
-                    <img src="http://192.168.1.206:30092/favicon/apple-touch-icon.png" style={{"width":"300px","height":"80px"}}/>
+                    <img src="/icons/SiteLogo.png" style={{"width":"400px","height":"90px"}}/>
+                    {/* <h2 className="text-dark">ArogyaMandi</h2> */}
                     <h5 className="text-dark">Video Consultation Platform</h5>
                 </div>
 
@@ -805,7 +806,7 @@ function Index() {
                 {role === "Doctor" && connectClicked && !callInitiated &&
 
                 <div className='text-center'>
-                    <div className='text-center p-3 mb-1 bg-white rounded w-50 mx-auto mt-3'>
+                    <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
                         {patientAlreadyJoined?
                         <h5 className='text-success'>Patient Has Joined And Waiting For Your Call</h5>
                         :<h5 className='text-danger'>Please Wait For Patient To Join</h5>
@@ -815,19 +816,19 @@ function Index() {
                 }
 
                 {role === "Patient" && connectClicked && !callInitiated &&
-                <div className='text-center p-3 mb-1 bg-white rounded w-50 mx-auto mt-3'>
+                <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
                     <h5 className='text-success'>Doctor Will Call Shortly. Please Wait</h5>
                 </div>
                 }
 
                 {role === "Doctor" && personLeft &&
-                <div className='text-center p-3 bg-white rounded w-50 mx-auto mt-3'>
+                <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
                     <h5 className='text-danger'>Patient Has Left The Call , Redirecting To The Dashboard...</h5>
                 </div>
                 }
 
                 {role === "Patient" && personLeft &&
-                <div className='text-center p-3 bg-white rounded w-50 mx-auto mt-3'>
+                <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
                     <h5 className='text-danger'>Doctor Has Left The Call , Redirecting To The Dashboard...</h5>
                 </div>
                 }
@@ -868,6 +869,7 @@ function Index() {
 
 
 
+                {connectClicked &&
                 <div className='d-flex justify-content-center border-radius-50'>
                     <div id='camera-btn' onClick={toggleVideo} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(150,20,249,.9)" }} className=' d-flex justify-content-center align-items-center m-2'>
                         <img style={{ height: "30px", width: "30px" }} src="/icons/camera.png" alt='Camere Button' />
@@ -879,12 +881,13 @@ function Index() {
                         <img style={{ height: "30px", width: "30px" }} src="/icons/phone.png" alt='Camera Button' />
                     </div>
                 </div>
+                }
 
 
 
 
                 {!callInitiated && (
-                    <div className='d-flex justify-content-center'>
+                    <div className='d-flex justify-content-center mt-2'>
                         <div style={{display: join? "block":"none"}}>
                             {/* <input type="text" name="localId" id="localId" onChange={handleSetLocalId} value={localIdInp} placeholder="Enter Your ID" className='h-50 border-dark'></input> */}
                             <button id="connectBtn" className='btn btn-primary m-3' onClick={handleConnect}>Join Now</button>
@@ -893,7 +896,7 @@ function Index() {
                         {role === "Doctor" && patientAlreadyJoined &&
                         <div style={{display: join? "none":"block"}}>
                             {/* <input type="text" name="remoteId" id="remoteId" onChange={handleSetRemoteId} value={remoteIdInp} placeholder="Enter Remote ID" className='h-50 border-dark'></input> */}
-                            <button id="callBtn" className='btn btn-success m-3' onClick={handleCall}>Call</button>
+                            <button id="callBtn" className='btn btn-success m-2' onClick={handleCall}>Call</button>
                         </div>
                         }
                     </div>
