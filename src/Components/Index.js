@@ -7,7 +7,7 @@ import Stomp from 'stompjs';
 
 function Index() {
 
-    const { myId, remoteId, role } = useParams();
+    const { myId, remoteId, role, appointmentId } = useParams();
     const localVideo = useRef();
     const remoteVideo = useRef();
 
@@ -707,37 +707,45 @@ function Index() {
       
       const handleDownload = async () => {
         if (localRecorder && remoteRecorder) {
-          const localBlob = localRecorder.getBlob();
-          const remoteBlob = remoteRecorder.getBlob();
+          const doctorStream = localRecorder.getBlob();
+          const patientStream = remoteRecorder.getBlob();
           console.log("Local Video Blob Size is: " + localRecorder)
           console.log("Remote Video Blob Size is: " + remoteRecorder)
         
-          const formData = new FormData();
-        formData.append('localVideo', localBlob);
-        formData.append('remoteVideo', remoteBlob);
- 
-        const response = await fetch('https://192.168.1.206:30031/side', {
+        const formData = new FormData();
+        formData.append('doctorStream', doctorStream);
+        formData.append('patientStream', patientStream);
+        formData.append('appointmentId', appointmentId);
+
+        const response = await fetch('https://192.168.1.206:30002/api/documentation/video-recordings',{
             method: 'POST',
-            body: formData,
+            body: formData
         });
 
         console.log(response);
  
-        if (response.ok) {
-            const blob = await response.blob();
-            console.log("Merged Video size is"+blob.size)
-            const url = URL.createObjectURL(blob);
+        // const response = await fetch('https://192.168.1.206:30031/side', {
+        //     method: 'POST',
+        //     body: formData,
+        // });
+
+        // console.log(response);
+ 
+        // if (response.ok) {
+        //     const blob = await response.blob();
+        //     console.log("Merged Video size is"+blob.size)
+        //     const url = URL.createObjectURL(blob);
    
-            // Create a link and trigger a download
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Date ${new Date().toISOString()} merged_video.webm`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-        } else {
-            // Handle errors
-            console.error('Error merging videos:', response.statusText);
-        }
+        //     // Create a link and trigger a download
+        //     const a = document.createElement('a');
+        //     a.href = url;
+        //     a.download = `Date ${new Date().toISOString()} merged_video.webm`;
+        //     a.click();
+        //     window.URL.revokeObjectURL(url);
+        // } else {
+        //     // Handle errors
+        //     console.error('Error merging videos:', response.statusText);
+        // }
           
         //downloadLocalBlob(localBlob);
         //downloadRemoteBlob(remoteBlob);
