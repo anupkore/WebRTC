@@ -5,6 +5,8 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import RecordRTC from 'recordrtc';
 import Stomp from 'stompjs';
+import MyVerticallyCenteredModal from './MyVerticallyCenteredModal';
+import { Bars } from 'react-loader-spinner';
 
 function Index() {
 
@@ -17,19 +19,20 @@ function Index() {
     const [errorMessage, setErrorMessage] = useState('');
     const [remainder, setRemainder] = useState("");
     const [callInitiated, setCallInitiated] = useState(false);
-    const [join , setJoin] = useState(true);
-    const [connectClicked , setConnectClicked] = useState(false);
-    const [patientJoined , setPatientJoined] = useState(false);
-    const [patientAlreadyJoined , setPatientAlreadyJoined] = useState(false);
-    const [personLeft , setPersonLeft] = useState(false);
-    const [leaveClicked , setLeaveClicked] = useState(false);
+    const [join, setJoin] = useState(true);
+    const [connectClicked, setConnectClicked] = useState(false);
+    const [patientJoined, setPatientJoined] = useState(false);
+    const [patientAlreadyJoined, setPatientAlreadyJoined] = useState(false);
+    const [personLeft, setPersonLeft] = useState(false);
+    const [leaveClicked, setLeaveClicked] = useState(false);
     const [localRecorder, setLocalRecorder] = useState(null);
     const [remoteRecorder, setRemoteRecorder] = useState(null);
     const [recordingStarted, setRecordingStarted] = useState(false);
     const [recordingTextVisible, setRecordingTextVisible] = useState(false);
-    const [recordClicked , setRecordClicked] = useState(false);
-    const [recordingStopped , setRecordingStopped] = useState(false);
-    const [recordButtonDisplay , setRecordButtonDisplay] = useState(false);
+    const [recordClicked, setRecordClicked] = useState(false);
+    const [recordingStopped, setRecordingStopped] = useState(false);
+    const [recordButtonDisplay, setRecordButtonDisplay] = useState(false);
+    const [modalShow, setModalShow] = useState(false);
 
     const [localStream, setLocalStream] = useState(null);
     let remoteStream;
@@ -39,7 +42,7 @@ function Index() {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////  
-    
+
     const iceServers = {
         iceServers: [
             // {
@@ -61,15 +64,15 @@ function Index() {
             },
             {
                 urls: 'turn:192.168.0.170:3478?transport=udp',
-                    username: 'test',
-                    credential: 'test123'
+                username: 'test',
+                credential: 'test123'
             }
         ],
         iceCandidatePoolSize: 2
     };
-    
- 
-    
+
+
+
     localPeer = new RTCPeerConnection(iceServers)
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -100,23 +103,22 @@ function Index() {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-    
-    useEffect(()=>{
-        if(connectClicked){
+
+
+    useEffect(() => {
+        if (connectClicked) {
             //var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
             //var socket = new WebSocket('ws://localhost:8080/websocket');
             var socket = new WebSocket('wss://192.168.1.206:30030/websocket');
             stompClient = Stomp.over(socket);
         }
-    },[connectClicked,patientAlreadyJoined,patientJoined,personLeft,leaveClicked,recordClicked,recordingStopped])
-    
+    }, [connectClicked, patientAlreadyJoined, patientJoined, personLeft, leaveClicked, recordClicked, recordingStopped, modalShow])
 
-    useEffect(()=>{
-        
-        if(connectClicked)
-        {
-            
+
+    useEffect(() => {
+
+        if (connectClicked) {
+
             stompClient.connect({}, frame => {
 
                 callRequestSubscription();
@@ -130,20 +132,20 @@ function Index() {
                 recordRequestSubscription();
                 recordRequestAcceptanceSubscription();
                 recordingStoppedSubscription();
-                
-                if(leaveClicked){
+
+                if (leaveClicked) {
                     sendLeaveRequest();
                 }
 
-                if(recordClicked){
+                if (recordClicked) {
                     sendRecordRequest();
                 }
 
-                if(recordingStopped){
+                if (recordingStopped) {
                     sendRecordingStoppedMessage();
                 }
 
-                const ids = { myId: myId, remoteId: remoteId,  role: role };
+                const ids = { myId: myId, remoteId: remoteId, role: role };
                 stompClient.send("/app/addUser", {}, JSON.stringify(ids));
             }
                 , error => {
@@ -153,14 +155,14 @@ function Index() {
 
 
         }
-        else{
+        else {
             console.log("Stomp Clent Not Connected")
         }
         console.log("first connection");
-    },[connectClicked,leaveClicked,recordClicked,recordingStopped])
+    }, [connectClicked, leaveClicked, recordClicked, recordingStopped])
 
 
-    useEffect(()=>{
+    useEffect(() => {
         //Setting remote video stream to remote video div
         localPeer.ontrack = (event) => {
             try {
@@ -177,13 +179,13 @@ function Index() {
             }
         };
 
-    },[join])
-
-    
+    }, [join])
 
 
 
-    function callRequestSubscription(){
+
+
+    function callRequestSubscription() {
         stompClient.subscribe('/user/' + myId + "/topic/call-request", (callRequest) => {
             const caller = JSON.parse(callRequest.body);
             const acceptCall = window.confirm(`Incoming call from ${caller}. Accept?`);
@@ -195,10 +197,10 @@ function Index() {
         });
     }
 
-    function callSubscription(){
+    function callSubscription() {
         stompClient.subscribe('/user/' + myId + "/topic/call", (call) => {
-            
-            sendCandidate_1(call);    
+
+            sendCandidate_1(call);
 
             // Adding Audio and Video Local Peer
             localStream.getTracks().forEach(track => {
@@ -216,7 +218,7 @@ function Index() {
         });
     }
 
-    function offerSubscription(){
+    function offerSubscription() {
         stompClient.subscribe('/user/' + myId + "/topic/offer", async (offer) => {
             try {
 
@@ -260,7 +262,7 @@ function Index() {
                     localPeer.setLocalDescription(description)
                     console.log("Setting Local Description")
                     console.log(description)
-                    console.log("Remote Id While Sending ID is..."+remoteId)
+                    console.log("Remote Id While Sending ID is..." + remoteId)
                     stompClient.send("/app/answer", {}, JSON.stringify({
                         "toUser": remoteId,
                         "fromUser": myId,
@@ -273,10 +275,10 @@ function Index() {
                 setErrorMessage("An error occurred while sending description");
             }
 
-            
-            
+
+
             //Sending Candidates to the ice server
-            localPeer.onicecandidate =(event) => {
+            localPeer.onicecandidate = (event) => {
                 if (event.candidate) {
                     var candidate = {
                         type: "candidate",
@@ -287,14 +289,14 @@ function Index() {
                     console.log(candidate)
 
                     try {
-                        setTimeout(()=>{
+                        setTimeout(() => {
                             stompClient.send("/app/candidate", {}, JSON.stringify({
-                            "toUser": remoteId,
-                            "fromUser": myId,
-                            "candidate": candidate
+                                "toUser": remoteId,
+                                "fromUser": myId,
+                                "candidate": candidate
                             }))
-                        },500)
-                        
+                        }, 500)
+
                     } catch (error) {
                         console.error("Error sending Candidate");
                         setErrorMessage("Error sending Candidate");
@@ -306,7 +308,7 @@ function Index() {
         });
     }
 
-    function answerSubscription(){
+    function answerSubscription() {
         stompClient.subscribe('/user/' + myId + "/topic/answer", async (answer) => {
             console.log("Answer Came");
             try {
@@ -320,7 +322,7 @@ function Index() {
         });
     }
 
-    function candidateSubscription(){
+    function candidateSubscription() {
         stompClient.subscribe("/user/" + myId + "/topic/candidate", (candidate) => {
             console.log("Candidate Came");
             console.log("Inside /Candidate")
@@ -338,14 +340,14 @@ function Index() {
 
             console.log("Adding iceCandidate")
             setCallInitiated(true);
-            
+
             // Add the ice candidate to the peer connection
             localPeer.addIceCandidate(iceCandidate);
         });
 
     }
 
-    function remainderSubscription(){
+    function remainderSubscription() {
         stompClient.subscribe("/topic/reminder", message => {
             console.log('Reminder:', JSON.parse(message.body).message);
             window.alert("Reminder: " + JSON.parse(message.body).message);
@@ -353,41 +355,41 @@ function Index() {
         });
     }
 
-    function notification(){
+    function notification() {
 
         stompClient.subscribe('/user/' + myId + "/topic/is-patient-joined", (joinedUser) => {
-        const user = JSON.parse(joinedUser.body);
-        if(joinedUser.body === "true"){
-            console.log("Patient has already joined");
+            const user = JSON.parse(joinedUser.body);
+            if (joinedUser.body === "true") {
+                console.log("Patient has already joined");
+                setPatientAlreadyJoined(true);
+                //window.alert("Patient has already joined");
+            } else {
+                console.log("Patient has not joined yet");
+                //window.alert("Patient has not joined yet");
+            }
+        });
+
+        stompClient.subscribe('/user/' + myId + "/topic/patient-joined", (joinedUser) => {
+            const user = JSON.parse(joinedUser.body);
+            console.log("Patient Has Joined");
             setPatientAlreadyJoined(true);
-            //window.alert("Patient has already joined");
-        }else{
-            console.log("Patient has not joined yet");
-            //window.alert("Patient has not joined yet");
-        }
-    });
+            //window.alert("Patient Has Joined");
 
-    stompClient.subscribe('/user/' + myId + "/topic/patient-joined", (joinedUser) => {
-        const user = JSON.parse(joinedUser.body);
-        console.log("Patient Has Joined");
-        setPatientAlreadyJoined(true);
-        //window.alert("Patient Has Joined");
-        
-    });
+        });
 
-}
-
-    function callEndedSubscription(){
-        stompClient.subscribe('/user/' + myId + "/topic/callEnded", (object) => {
-        console.log(object.body);
-        setPersonLeft(true);
-        setTimeout(() => {
-            handleLeave();
-        },10000);
-    });
     }
 
-    function sendCandidate_1(call){
+    function callEndedSubscription() {
+        stompClient.subscribe('/user/' + myId + "/topic/callEnded", (object) => {
+            console.log(object.body);
+            setPersonLeft(true);
+            setTimeout(() => {
+                handleLeave();
+            }, 10000);
+        });
+    }
+
+    function sendCandidate_1(call) {
         localPeer.onicecandidate = (event) => {
             try {
 
@@ -400,14 +402,14 @@ function Index() {
                     console.log("Sending Candidate")
                     console.log(candidate)
 
-                    setTimeout(()=>{
+                    setTimeout(() => {
                         stompClient.send("/app/candidate", {}, JSON.stringify({
-                        "toUser": call.body,
-                        "fromUser": myId,
-                        "candidate": candidate
+                            "toUser": call.body,
+                            "fromUser": myId,
+                            "candidate": candidate
                         }))
-                    },500)
-                    
+                    }, 500)
+
                 }
 
             } catch (error) {
@@ -418,7 +420,7 @@ function Index() {
         }
     }
 
-    function createOffer(call){
+    function createOffer(call) {
         // Creating And Sending Offer
 
         localPeer.createOffer().then(description => {
@@ -439,19 +441,18 @@ function Index() {
             setErrorMessage("Error creating offer");
         });
     }
- 
-    function handleConnect() 
-    {
+
+    function handleConnect() {
         setConnectClicked(true);
         setJoin(false);
-        
+        setModalShow(true);
     }
 
     function endCallAutomatically() {
         console.log('Call ended automatically.');
         handleLeave();
-    }    
-    
+    }
+
     function showReminder() {
         console.log('1 minutes remaining!');
 
@@ -480,52 +481,50 @@ function Index() {
 
     }
 
-    function sendLeaveRequest(){
-        if (stompClient) 
-        {
-            const ids = { myId: myId, remoteId: remoteId};
-            stompClient.send("/app/leave", {},JSON.stringify(ids) );
+    function sendLeaveRequest() {
+        if (stompClient) {
+            const ids = { myId: myId, remoteId: remoteId };
+            stompClient.send("/app/leave", {}, JSON.stringify(ids));
 
             // Disconnect the WebSocket connection
             stompClient.disconnect(() => {
                 console.log('STOMP client disconnected');
             });
-            if(role === "Doctor")
-            {
+            if (role === "Doctor") {
                 window.location.href = "http://192.168.1.206:30092/app";
-            }else{
+            } else {
                 window.location.href = "http://192.168.1.206:30091/dashboard/appointments";
             }
         }
     }
 
-    function handleRecordClicked(){
+    function handleRecordClicked() {
         setRecordClicked(true);
     }
 
-    function sendRecordRequest(){
-        if(stompClient){
+    function sendRecordRequest() {
+        if (stompClient) {
             console.log("Sending Call Record Request");
-            const details = {"toUser":remoteId , "fromUser":myId}
-            stompClient.send("/app/recordRequest",{},JSON.stringify(details))
+            const details = { "toUser": remoteId, "fromUser": myId }
+            stompClient.send("/app/recordRequest", {}, JSON.stringify(details))
         }
-        else{
+        else {
             console.log("StompClient does not exist");
         }
     }
 
-    function sendRecordingStoppedMessage(){
-        if(stompClient){
+    function sendRecordingStoppedMessage() {
+        if (stompClient) {
             console.log("Sending recording stopped message");
-            const details = {"toUser":remoteId}
-            stompClient.send("/app/recordingStopped",{},JSON.stringify(details))
+            const details = { "toUser": remoteId }
+            stompClient.send("/app/recordingStopped", {}, JSON.stringify(details))
         }
-        else{
+        else {
             console.log("StompClient does not exist");
         }
     }
 
-    function recordRequestSubscription(){
+    function recordRequestSubscription() {
         stompClient.subscribe('/user/' + myId + "/topic/recordRequest", (callRecordRequest) => {
             const caller = JSON.parse(callRecordRequest.body);
             const acceptRecordCall = window.confirm(`Doctor wants to record this call for future reference.  Accept?`);
@@ -533,13 +532,13 @@ function Index() {
             if (acceptRecordCall) {
                 setRecordingStarted(true);
                 setRecordingTextVisible(true);
-                const id = {"toUser":remoteId};
-                stompClient.send("/app/recordRequestAcceptance",{},JSON.stringify(id))
+                const id = { "toUser": remoteId };
+                stompClient.send("/app/recordRequestAcceptance", {}, JSON.stringify(id))
             }
         });
     }
 
-    function recordRequestAcceptanceSubscription(){                                                                                                                                        
+    function recordRequestAcceptanceSubscription() {
         stompClient.subscribe('/user/' + myId + "/topic/recordRequestAcceptance", (callRecordRequestAcceptance) => {
             console.log(callRecordRequestAcceptance.body);
             setRecordButtonDisplay(true);
@@ -547,9 +546,9 @@ function Index() {
         });
     }
 
-    function recordingStoppedSubscription(){
+    function recordingStoppedSubscription() {
         stompClient.subscribe('/user/' + myId + "/topic/recordingStopped", (message) => {
-            console.log("Recording Stopped Message is : "+message.body);
+            console.log("Recording Stopped Message is : " + message.body);
             setRecordingStarted(false);
             setRecordingTextVisible(false);
             setRecordingStopped(false);
@@ -628,15 +627,14 @@ function Index() {
     }
 
 
-    function disconnectFromStomp() 
-    {
+    function disconnectFromStomp() {
         if (stompClient) {
             stompClient.disconnect(() => {
                 console.log('STOMP client disconnected');
             });
         }
     }
-    
+
 
     useEffect(() => {
         const handleBeforeUnload = () => {
@@ -658,33 +656,33 @@ function Index() {
 
     const startRecording = (mediaStream, setRecorder) => {
         const recorder = RecordRTC(mediaStream, {
-          type: 'video',
-          videoBitsPerSecond: 100000,
-          audio: true,
+            type: 'video',
+            videoBitsPerSecond: 100000,
+            audio: true,
         });
-    
+
         recorder.startRecording();
 
         setRecorder(recorder);
         setRecordingStarted(true);
         setRecordingTextVisible(true);
-      };
+    };
 
-      const stopRecording = (recorder) => {
+    const stopRecording = (recorder) => {
         if (recorder) {
-          recorder.stopRecording(() => {
-            const blob = recorder.getBlob();
-            // Handle the blob (e.g., save it, download it)
-            console.log(blob); 
-          });
+            recorder.stopRecording(() => {
+                const blob = recorder.getBlob();
+                // Handle the blob (e.g., save it, download it)
+                console.log(blob);
+            });
         }
         setRecordingStarted(false);
         setRecordingTextVisible(false);
         setRecordClicked(false);
         setRecordingStopped(true);
-      };
+    };
 
-      const downloadLocalBlob = (localBlob) => {
+    const downloadLocalBlob = (localBlob) => {
         const url = URL.createObjectURL(localBlob);
         const a = document.createElement('a');
         document.body.appendChild(a);
@@ -693,9 +691,9 @@ function Index() {
         a.download = `local_video_${Date.now()}.webm`;
         a.click();
         window.URL.revokeObjectURL(url);
-      };
-      
-      const downloadRemoteBlob = (remoteBlob) => {
+    };
+
+    const downloadRemoteBlob = (remoteBlob) => {
         const url = URL.createObjectURL(remoteBlob);
         const a = document.createElement('a');
         document.body.appendChild(a);
@@ -704,67 +702,67 @@ function Index() {
         a.download = `remote_video_${Date.now()}.webm`;
         a.click();
         window.URL.revokeObjectURL(url);
-      };
-      
-      const handleDownload = async () => {
+    };
+
+    const handleDownload = async () => {
         if (localRecorder && remoteRecorder) {
-          const doctorStream = localRecorder.getBlob();
-          const patientStream = remoteRecorder.getBlob();
-          console.log("Local Video Blob Size is: " + localRecorder)
-          console.log("Remote Video Blob Size is: " + remoteRecorder)
-        
-        const formData = new FormData();
-        formData.append('doctorStream', doctorStream);
-        formData.append('patientStream', patientStream);
-        formData.append('appointmentId', appointmentId);
+            const doctorStream = localRecorder.getBlob();
+            const patientStream = remoteRecorder.getBlob();
+            console.log("Local Video Blob Size is: " + localRecorder)
+            console.log("Remote Video Blob Size is: " + remoteRecorder)
 
-        const response = await fetch('https://192.168.1.206:30002/api/documentation/video-recordings',{
-            method: 'POST',
-            body: formData
-        });
+            const formData = new FormData();
+            formData.append('doctorStream', doctorStream);
+            formData.append('patientStream', patientStream);
+            formData.append('appointmentId', appointmentId);
 
-        console.log(response);
-        toast.success("Video Downloaded Successfully");
-        // const response = await fetch('https://192.168.1.206:30031/side', {
-        //     method: 'POST',
-        //     body: formData,
-        // });
+            const response = await fetch('https://192.168.1.206:30002/api/documentation/video-recordings', {
+                method: 'POST',
+                body: formData
+            });
 
-        // console.log(response);
- 
-        // if (response.ok) {
-        //     const blob = await response.blob();
-        //     console.log("Merged Video size is"+blob.size)
-        //     const url = URL.createObjectURL(blob);
-   
-        //     // Create a link and trigger a download
-        //     const a = document.createElement('a');
-        //     a.href = url;
-        //     a.download = `Date ${new Date().toISOString()} merged_video.webm`;
-        //     a.click();
-        //     window.URL.revokeObjectURL(url);
-        // } else {
-        //     // Handle errors
-        //     console.error('Error merging videos:', response.statusText);
-        // }
-          
-        //downloadLocalBlob(localBlob);
-        //downloadRemoteBlob(remoteBlob);
+            console.log(response);
+            toast.success("Video Downloaded Successfully");
+            // const response = await fetch('https://192.168.1.206:30031/side', {
+            //     method: 'POST',
+            //     body: formData,
+            // });
+
+            // console.log(response);
+
+            // if (response.ok) {
+            //     const blob = await response.blob();
+            //     console.log("Merged Video size is"+blob.size)
+            //     const url = URL.createObjectURL(blob);
+
+            //     // Create a link and trigger a download
+            //     const a = document.createElement('a');
+            //     a.href = url;
+            //     a.download = `Date ${new Date().toISOString()} merged_video.webm`;
+            //     a.click();
+            //     window.URL.revokeObjectURL(url);
+            // } else {
+            //     // Handle errors
+            //     console.error('Error merging videos:', response.statusText);
+            // }
+
+            //downloadLocalBlob(localBlob);
+            //downloadRemoteBlob(remoteBlob);
         }
-      };
-      
-    
-      const handleStartRecording = () => {
+    };
+
+
+    const handleStartRecording = () => {
         startRecording(localVideo.current.srcObject, setLocalRecorder);
         startRecording(remoteVideo.current.srcObject, setRemoteRecorder);
-      };
-      
-      const handleStopRecording = () => {
+    };
+
+    const handleStopRecording = () => {
         stopRecording(localRecorder);
         stopRecording(remoteRecorder);
-      };
-      
-      const blinkingDotStyle = {
+    };
+
+    const blinkingDotStyle = {
         width: '10px',
         height: '10px',
         backgroundColor: 'red',
@@ -785,7 +783,7 @@ function Index() {
     const styleSheet = document.styleSheets[0];
     styleSheet.insertRule(keyframes, styleSheet.cssRules.length);
 
-    
+
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -794,91 +792,131 @@ function Index() {
 
     return (
 
-        
-            <div style={{backgroundImage: `url(https://img.freepik.com/premium-vector/technology-background-web-connection-background-connection-background_759274-328.jpg?w=1060)`,backgroundSize:"cover", filter:"blur"}}>
-                
-                <div className='text-center'>
-                    <img src="/icons/SiteLogo.png" style={{"width":"400px","height":"90px"}}/>
-                    {/* <h2 className="text-dark">ArogyaMandi</h2> */}
-                    <h5 className="text-dark">Video Consultation Platform</h5>
-                </div>
+
+        <div style={{ backgroundImage: `url(https://img.freepik.com/premium-vector/technology-background-web-connection-background-connection-background_759274-328.jpg?w=1060)`, backgroundSize: "cover", filter: "blur" }}>
+
+            <div className='text-center'>
+                <img src="/icons/SiteLogo.png" style={{ "width": "400px", "height": "90px" }} />
+                {/* <h2 className="text-dark">ArogyaMandi</h2> */}
+                <h5 className="text-dark">Video Consultation Platform</h5>
+            </div>
 
 
-                {!connectClicked &&
+            {!connectClicked &&
                 <div className='text-center mt-3'>
                     <h5 className='text-success'>Please Click On Join Now Button To Start A Call</h5>
                 </div>
-                }
+            }
 
 
 
-                {role === "Doctor" && connectClicked && !callInitiated &&
+            {role === "Doctor" && connectClicked && !callInitiated &&
 
-                <div className='text-center'>
+                // <div className='text-center'>
+                //     <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
+                //         {patientAlreadyJoined?
+                //         <h5 className='text-success'>Patient Has Joined And Waiting For Your Call</h5>
+                //         :<h5 className='text-danger'>Please Wait For Patient To Join</h5>
+                //         }
+                //     </div>
+                // </div>
+                <MyVerticallyCenteredModal
+                    show={modalShow}
+                    onHide={() => setModalShow(false)}
+                    title="Modal Title"
+                >
                     <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
-                        {patientAlreadyJoined?
-                        <h5 className='text-success'>Patient Has Joined And Waiting For Your Call</h5>
-                        :<h5 className='text-danger'>Please Wait For Patient To Join</h5>
+                        {patientAlreadyJoined ?
+                            <div>
+                                <h5 className='text-success'>Patient Has Joined And Waiting For Your Call</h5>
+                                <button id="callBtn" className='btn btn-success m-2' onClick={handleCall}>Call Now</button>
+                            </div> 
+                            :
+                            <div>
+                                <h5 className='text-danger'>Please Wait For Patient To Join</h5>
+                                <div className='ml-5'>
+                                    <Bars height="80" width="80" color="#4fa94d" ariaLabel="bars-loading" wrapperStyle={{}} wrapperClass="m-auto d-block" visible={true}/>
+                                </div>
+                            </div>
                         }
                     </div>
-                </div>
-                }
+                </MyVerticallyCenteredModal>
+            }
+            
 
-                {role === "Patient" && connectClicked && !callInitiated &&
+            {role === "Patient" && connectClicked && !callInitiated &&
+                <MyVerticallyCenteredModal
+                show={modalShow}
+                onHide={() => setModalShow(false)}
+                title="Modal Title"
+            >
                 <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
                     <h5 className='text-success'>Doctor Will Call Shortly. Please Wait</h5>
                 </div>
-                }
+                </MyVerticallyCenteredModal>
+            }
 
-                {role === "Doctor" && personLeft &&
+            {role === "Doctor" && personLeft &&
+                <MyVerticallyCenteredModal
+                show={modalShow}
+                onHide={() => setModalShow(false)}
+                title="Modal Title"
+            >
                 <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
                     <h5 className='text-danger'>Patient Has Left The Call , Redirecting To The Dashboard...</h5>
                 </div>
-                }
+                </MyVerticallyCenteredModal>
+            }
 
-                {role === "Patient" && personLeft &&
+            {role === "Patient" && personLeft &&
+                <MyVerticallyCenteredModal
+                show={modalShow}
+                onHide={() => setModalShow(false)}
+                title="Modal Title"
+            >
                 <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
                     <h5 className='text-danger'>Doctor Has Left The Call , Redirecting To The Dashboard...</h5>
                 </div>
-                }
+                </MyVerticallyCenteredModal>
+            }
 
-                {/* {recordingStarted &&
+            {/* {recordingStarted &&
                 <div className='text-center mt-3'>
                    <h5 className='text-danger'>Recording</h5> 
                 </div>
                 } */}
 
-                {recordingStarted && (
-                    <div className='text-center mt-3 d-flex justify-content-center'>
-                        <div className='mt-2' style={blinkingDotStyle}></div>
-                        <h5 className='text-danger'>
-                            <span className={`blinking-text ${recordingTextVisible ? 'visible' : 'hidden'}`}>Recording Started</span>
-                        </h5>
-                        
-                    </div>
-                )}
-                 
-                <div className="d-flex justify-content-center mt-1">
-                    <div>
-                        <h5 className='text-center'>You</h5>
-                        <video id="localVideo" ref={localVideo} autoPlay muted className='m-1 bg-black' style={{height:"350px",width:"650px",borderRadius:"20px"}}></video>
-                    </div>
+            {recordingStarted && (
+                <div className='text-center mt-3 d-flex justify-content-center'>
+                    <div className='mt-2' style={blinkingDotStyle}></div>
+                    <h5 className='text-danger'>
+                        <span className={`blinking-text ${recordingTextVisible ? 'visible' : 'hidden'}`}>Recording Started</span>
+                    </h5>
 
-                    <div>
-                        {role === "Doctor" && 
-                            <h5 className='text-center'>Patient</h5>
-                        }
-                        {role === "Patient" && 
-                            <h5 className='text-center'>Doctor</h5>
-                        }
-                        
-                        <video id="remoteVideo" ref={remoteVideo} autoPlay className='m-1 bg-black' style={{height:"350px",width:"650px",borderRadius:"20px"}}></video>
-                    </div>
+                </div>
+            )}
+
+            <div className="d-flex justify-content-center mt-1">
+                <div>
+                    <h5 className='text-center'>You</h5>
+                    <video id="localVideo" ref={localVideo} autoPlay muted className='m-1 bg-black' style={{ height: "350px", width: "650px", borderRadius: "20px" }}></video>
                 </div>
 
+                <div>
+                    {role === "Doctor" &&
+                        <h5 className='text-center'>Patient</h5>
+                    }
+                    {role === "Patient" &&
+                        <h5 className='text-center'>Doctor</h5>
+                    }
+
+                    <video id="remoteVideo" ref={remoteVideo} autoPlay className='m-1 bg-black' style={{ height: "350px", width: "650px", borderRadius: "20px" }}></video>
+                </div>
+            </div>
 
 
-                {connectClicked &&
+
+            {connectClicked &&
                 <div className='d-flex justify-content-center border-radius-50'>
                     <div id='camera-btn' onClick={toggleVideo} style={{ borderRadius: "50%", padding: "20px", backgroundColor: "rgb(150,20,249,.9)" }} className=' d-flex justify-content-center align-items-center m-2'>
                         <img style={{ height: "30px", width: "30px" }} src="/icons/camera.png" alt='Camere Button' />
@@ -890,67 +928,67 @@ function Index() {
                         <img style={{ height: "30px", width: "30px" }} src="/icons/phone.png" alt='Camera Button' />
                     </div>
                 </div>
-                }
+            }
 
 
 
 
-                {!callInitiated && (
-                    <div className='d-flex justify-content-center mt-2'>
-                        <div style={{display: join? "block":"none"}}>
-                            {/* <input type="text" name="localId" id="localId" onChange={handleSetLocalId} value={localIdInp} placeholder="Enter Your ID" className='h-50 border-dark'></input> */}
-                            <button id="connectBtn" className='btn btn-primary m-3' onClick={handleConnect}>Join Now</button>
-                        </div>
+            {!callInitiated && (
+                <div className='d-flex justify-content-center mt-2'>
+                    <div style={{ display: join ? "block" : "none" }}>
+                        {/* <input type="text" name="localId" id="localId" onChange={handleSetLocalId} value={localIdInp} placeholder="Enter Your ID" className='h-50 border-dark'></input> */}
+                        <button id="connectBtn" className='btn btn-primary m-3' onClick={handleConnect}>Join Now</button>
+                    </div>
 
-                        {role === "Doctor" && patientAlreadyJoined &&
-                        <div style={{display: join? "none":"block"}}>
+                    {role === "Doctor" && patientAlreadyJoined &&
+                        <div style={{ display: join ? "none" : "block" }}>
                             {/* <input type="text" name="remoteId" id="remoteId" onChange={handleSetRemoteId} value={remoteIdInp} placeholder="Enter Remote ID" className='h-50 border-dark'></input> */}
                             <button id="callBtn" className='btn btn-success m-2' onClick={handleCall}>Call</button>
                         </div>
-                        }
-                    </div>
-                )}
+                    }
+                </div>
+            )}
 
-                {/* <div className='d-flex justify-content-center mt-5'>
+            {/* <div className='d-flex justify-content-center mt-5'>
                     <button id="test" className='btn btn-danger m-3' onClick={handleLeave}>End Call</button>
                     <button id="testConnection" className='btn btn-primary m-3' onClick={handleTest}>Test Connection</button>
                 </div> */}
-                {/* <div className='d-flex justify-content-center mt-5'>
+            {/* <div className='d-flex justify-content-center mt-5'>
                     <button className={`btn ${videoEnabled ? 'btn-primary' : 'btn-secondary'} m-3`} onClick={toggleVideo}>
                         {videoEnabled ? 'Turn Off Video' : 'Turn On Video'}
                     </button>
                 </div> */}
 
 
-                {callInitiated && role === "Doctor" &&
-                    <div className='text-center'>
-                        {recordButtonDisplay && !recordingStopped &&
+            {callInitiated && role === "Doctor" &&
+                <div className='text-center'>
+                    {recordButtonDisplay && !recordingStopped &&
                         <button className='btn btn-primary m-3' onClick={handleStopRecording}>Stop Recording</button>
-                        }
+                    }
 
-                        {!recordButtonDisplay && !recordingStopped &&
+                    {!recordButtonDisplay && !recordingStopped &&
                         <button className='btn btn-primary m-3' onClick={handleRecordClicked}>Start Recording</button>
-                        }
+                    }
 
-                        {recordingStopped &&
+                    {recordingStopped &&
                         <button className='btn btn-success m-3' onClick={handleDownload}>Download Videos</button>
-                        }
-                    </div>
-                }
+                    }
+                </div>
+            }
 
-                    <ToastContainer
-                        position="top-right"
-                        autoClose={3000}
-                        hideProgressBar={false}
-                        newestOnTop
-                        closeOnClick
-                        rtl={false}
-                        pauseOnFocusLoss
-                        draggable
-                        pauseOnHover
-                    />
-            </div>
-        
+            <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+            />
+        </div>
+
     );
 }
 
