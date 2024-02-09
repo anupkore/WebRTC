@@ -206,7 +206,7 @@ const Recordings = () => {
           <Slider min={0} max={300} value={currentTime} onChange={handleSliderChange} styles={{
             track: { backgroundColor: 'black', height: 7 }, // Customize the track (filled part) style
             handle: {
-              backgroundColor:'blue',
+              backgroundColor:'black',
               borderColor: 'black', // Border color of the handle (slider thumb)
               height: 20, // Height of the handle
               width: 20, // Width of the handle

@@ -1,6 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.css';
 import { useRef, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import RecordRTC from 'recordrtc';
 import Stomp from 'stompjs';
@@ -723,7 +724,7 @@ function Index() {
         });
 
         console.log(response);
- 
+        toast.success("Video Downloaded Successfully");
         // const response = await fetch('https://192.168.1.206:30031/side', {
         //     method: 'POST',
         //     body: formData,
@@ -936,6 +937,18 @@ function Index() {
                         }
                     </div>
                 }
+
+                    <ToastContainer
+                        position="top-right"
+                        autoClose={3000}
+                        hideProgressBar={false}
+                        newestOnTop
+                        closeOnClick
+                        rtl={false}
+                        pauseOnFocusLoss
+                        draggable
+                        pauseOnHover
+                    />
             </div>
         
     );
