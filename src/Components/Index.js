@@ -7,6 +7,8 @@ import RecordRTC from 'recordrtc';
 import Stomp from 'stompjs';
 import MyVerticallyCenteredModal from './MyVerticallyCenteredModal';
 import { Bars } from 'react-loader-spinner';
+import { Button } from 'react-bootstrap';
+import MyCallRequestModal from './MyCallRequestModal';
 
 function Index() {
 
@@ -33,11 +35,17 @@ function Index() {
     const [recordingStopped, setRecordingStopped] = useState(false);
     const [recordButtonDisplay, setRecordButtonDisplay] = useState(false);
     const [modalShow, setModalShow] = useState(false);
+    const [callDeclined, setCallDeclined] = useState(false);
+    const [incomingCall, setIncomingCall] = useState(false);
+    const [callRequestModal, setCallRequestModal] = useState(false);
+    const [caller , setCaller] = useState(null);
+    const [stompClient, setStompClient] = useState(null);
+
 
     const [localStream, setLocalStream] = useState(null);
     let remoteStream;
     var localPeer;
-    let stompClient;
+    //let stompClient;
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -45,13 +53,13 @@ function Index() {
 
     const iceServers = {
         iceServers: [
-            // {
-            //     urls: [
-            //         'stun:stun1.l.google.com:19302',
-            //         'stun:stun2.l.google.com:19302',
-            //         'stun:global.stun.twilio.com:3478'
-            //     ]
-            // },
+            {
+                urls: [
+                    'stun:stun1.l.google.com:19302',
+                    'stun:stun2.l.google.com:19302',
+                    'stun:global.stun.twilio.com:3478'
+                ]
+            },
             {
                 urls: 'turn:turn.jami.net',
                 username: 'ring',
@@ -104,24 +112,25 @@ function Index() {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
     useEffect(() => {
         if (connectClicked) {
+            //const socket = new WebSocket('ws://localhost:8080/websocket');
             //var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
-            //var socket = new WebSocket('ws://localhost:8080/websocket');
             var socket = new WebSocket('wss://192.168.1.206:30030/websocket');
-            stompClient = Stomp.over(socket);
+            const client = Stomp.over(socket);
+            setStompClient(client); // Update stompClient state
         }
-    }, [connectClicked, patientAlreadyJoined, patientJoined, personLeft, leaveClicked, recordClicked, recordingStopped, modalShow])
-
+    }, [connectClicked]); // Only depend on connectClicked state variable
+    
 
     useEffect(() => {
 
-        if (connectClicked) {
+        if (stompClient !== null) {
 
             stompClient.connect({}, frame => {
 
                 callRequestSubscription();
+                callRejectionSubscription();
                 callSubscription();
                 offerSubscription();
                 answerSubscription();
@@ -133,24 +142,13 @@ function Index() {
                 recordRequestAcceptanceSubscription();
                 recordingStoppedSubscription();
 
-                if (leaveClicked) {
-                    sendLeaveRequest();
-                }
-
-                if (recordClicked) {
-                    sendRecordRequest();
-                }
-
-                if (recordingStopped) {
-                    sendRecordingStoppedMessage();
-                }
 
                 const ids = { myId: myId, remoteId: remoteId, role: role };
                 stompClient.send("/app/addUser", {}, JSON.stringify(ids));
             }
                 , error => {
                     console.error('Error connecting to WebSocket server:', error);
-                    window.alert('Error connecting to WebSocket server');
+                    //window.alert('Error connecting to WebSocket server');
                 })
 
 
@@ -159,7 +157,9 @@ function Index() {
             console.log("Stomp Clent Not Connected")
         }
         console.log("first connection");
-    }, [connectClicked, leaveClicked, recordClicked, recordingStopped])
+    }, [stompClient, connectClicked])
+
+
 
 
     useEffect(() => {
@@ -179,7 +179,7 @@ function Index() {
             }
         };
 
-    }, [join])
+    }, [stompClient,join])
 
 
 
@@ -187,14 +187,34 @@ function Index() {
 
     function callRequestSubscription() {
         stompClient.subscribe('/user/' + myId + "/topic/call-request", (callRequest) => {
-            const caller = JSON.parse(callRequest.body);
-            const acceptCall = window.confirm(`Incoming call from ${caller}. Accept?`);
-            //const acceptCall = true;
+            const calledBy =callRequest.body;
+            setCaller(calledBy);
+            setIncomingCall(true);
+            setCallRequestModal(true);
+            // const acceptCall = window.confirm(`Incoming call from Dr ${caller}. Accept?`);
+            // //const acceptCall = true;
 
-            if (acceptCall) {
-                stompClient.send("/app/call", {}, JSON.stringify({ "callTo": myId, "callFrom": caller }))
-            }
+            // if (acceptCall) {
+            //     stompClient.send("/app/call", {}, JSON.stringify({ "callTo": myId, "callFrom": caller }))
+            // }else{
+            //     stompClient.send("/app/call-rejected", {}, JSON.stringify({"rejectedBy": myId, "messageTo": caller}))
+            //     setCallDeclined(true);
+            //     setTimeout(() => {
+            //         handleLeave();
+            //     }, 5000);
+            // }
         });
+    }
+
+
+    function callRejectionSubscription(){
+        stompClient.subscribe('/user/' + myId + "/topic/call-rejected", (callRequest) => {
+            console.log("Call rejected By Patient");
+            setCallDeclined(true);
+            setTimeout(() => {
+                handleLeave();
+            }, 5000);
+        })
     }
 
     function callSubscription() {
@@ -385,7 +405,7 @@ function Index() {
             setPersonLeft(true);
             setTimeout(() => {
                 handleLeave();
-            }, 10000);
+            }, 5000);
         });
     }
 
@@ -481,8 +501,23 @@ function Index() {
 
     }
 
+    function acceptCall(){
+        stompClient.send("/app/call", {}, JSON.stringify({ "callTo": myId, "callFrom": caller }))
+        setCallRequestModal(false)
+    }
+
+    function declineCall(){
+        stompClient.send("/app/call-rejected", {}, JSON.stringify({"rejectedBy": myId, "messageTo": caller}))
+        setCallRequestModal(false)
+        setCallDeclined(true);
+        setTimeout(() => {
+            handleLeave();
+        }, 5000);
+        
+    }
+
     function sendLeaveRequest() {
-        if (stompClient) {
+        if (stompClient !== null) {
             const ids = { myId: myId, remoteId: remoteId };
             stompClient.send("/app/leave", {}, JSON.stringify(ids));
 
@@ -500,6 +535,7 @@ function Index() {
 
     function handleRecordClicked() {
         setRecordClicked(true);
+        sendRecordRequest();
     }
 
     function sendRecordRequest() {
@@ -526,7 +562,7 @@ function Index() {
 
     function recordRequestSubscription() {
         stompClient.subscribe('/user/' + myId + "/topic/recordRequest", (callRecordRequest) => {
-            const caller = JSON.parse(callRecordRequest.body);
+            const caller = callRecordRequest.body;
             const acceptRecordCall = window.confirm(`Doctor wants to record this call for future reference.  Accept?`);
 
             if (acceptRecordCall) {
@@ -566,6 +602,7 @@ function Index() {
         clearTimeout(showReminder);
         clearTimeout(endCallAutomatically);
         hideVideos();
+        sendLeaveRequest();
     }
 
 
@@ -680,6 +717,7 @@ function Index() {
         setRecordingTextVisible(false);
         setRecordClicked(false);
         setRecordingStopped(true);
+        sendRecordingStoppedMessage();
     };
 
     const downloadLocalBlob = (localBlob) => {
@@ -722,7 +760,7 @@ function Index() {
             });
 
             console.log(response);
-            toast.success("Video Downloaded Successfully");
+            toast.success("Video Saved Successfully");
             // const response = await fetch('https://192.168.1.206:30031/side', {
             //     method: 'POST',
             //     body: formData,
@@ -810,7 +848,7 @@ function Index() {
 
 
 
-            {role === "Doctor" && connectClicked && !callInitiated &&
+            {role === "Doctor" && connectClicked && !callInitiated && !callDeclined &&
 
                 // <div className='text-center'>
                 //     <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
@@ -828,12 +866,12 @@ function Index() {
                     <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
                         {patientAlreadyJoined ?
                             <div>
-                                <h5 className='text-success'>Patient Has Joined And Waiting For Your Call</h5>
+                                <h5 className='text-success'>Patient has joined the call. Please proceed with the consultation.</h5>
                                 <button id="callBtn" className='btn btn-success m-2' onClick={handleCall}>Call Now</button>
                             </div> 
                             :
                             <div>
-                                <h5 className='text-danger'>Please Wait For Patient To Join</h5>
+                                <h5 className='text-danger'>Please wait for the patient to join the call.</h5>
                                 <div className='ml-5'>
                                     <Bars height="80" width="80" color="#4fa94d" ariaLabel="bars-loading" wrapperStyle={{}} wrapperClass="m-auto d-block" visible={true}/>
                                 </div>
@@ -844,14 +882,17 @@ function Index() {
             }
             
 
-            {role === "Patient" && connectClicked && !callInitiated &&
+            {role === "Patient" && connectClicked && !callInitiated && !callDeclined && !incomingCall &&
                 <MyVerticallyCenteredModal
                 show={modalShow}
                 onHide={() => setModalShow(false)}
                 title="Modal Title"
             >
                 <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
-                    <h5 className='text-success'>Doctor Will Call Shortly. Please Wait</h5>
+                    <h5 className='text-success'>Doctor Will Join Shortly. Please Wait</h5>
+                    <div className='ml-5'>
+                        <Bars height="80" width="80" color="#4fa94d" ariaLabel="bars-loading" wrapperStyle={{}} wrapperClass="m-auto d-block" visible={true}/>
+                    </div>
                 </div>
                 </MyVerticallyCenteredModal>
             }
@@ -868,6 +909,18 @@ function Index() {
                 </MyVerticallyCenteredModal>
             }
 
+            {role === "Doctor" && callDeclined &&
+                <MyVerticallyCenteredModal
+                show={modalShow}
+                onHide={() => setModalShow(false)}
+                title="Modal Title"
+            >
+                <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
+                    <h5 className='text-danger'>Patient Has Declined The Call , Redirecting To The Dashboard...</h5>
+                </div>
+                </MyVerticallyCenteredModal>
+            }
+
             {role === "Patient" && personLeft &&
                 <MyVerticallyCenteredModal
                 show={modalShow}
@@ -878,6 +931,37 @@ function Index() {
                     <h5 className='text-danger'>Doctor Has Left The Call , Redirecting To The Dashboard...</h5>
                 </div>
                 </MyVerticallyCenteredModal>
+            }
+
+            {role === "Patient" && callDeclined &&
+                <MyVerticallyCenteredModal
+                show={modalShow}
+                onHide={() => setModalShow(false)}
+                title="Modal Title"
+            >
+                <div className='text-center bg-white rounded w-50 mx-auto mt-3'>
+                    <h5 className='text-danger'>You Have Declined The Call , Redirecting To The Dashboard...</h5>
+                </div>
+                </MyVerticallyCenteredModal>
+            }
+
+
+
+            {role === "Patient" && incomingCall &&
+                <MyCallRequestModal
+                    show = {callRequestModal}
+                    onHide={() => setCallRequestModal(false)}
+                >
+                    <div>
+                        <div className='m-3'>
+                            <h5 className='text-center'>Incoming Call From Dr {caller}</h5>
+                        </div>
+                        <div className='d-flex justify-content-center align-items-center'>
+                            <Button className='btn btn-primary m-2' onClick={acceptCall}>Accept</Button>
+                            <Button className='btn btn-danger m-2' onClick={declineCall}>Decline</Button>
+                        </div>
+                    </div>
+                </MyCallRequestModal>
             }
 
             {/* {recordingStarted &&
@@ -939,13 +1023,6 @@ function Index() {
                         {/* <input type="text" name="localId" id="localId" onChange={handleSetLocalId} value={localIdInp} placeholder="Enter Your ID" className='h-50 border-dark'></input> */}
                         <button id="connectBtn" className='btn btn-primary m-3' onClick={handleConnect}>Join Now</button>
                     </div>
-
-                    {role === "Doctor" && patientAlreadyJoined &&
-                        <div style={{ display: join ? "none" : "block" }}>
-                            {/* <input type="text" name="remoteId" id="remoteId" onChange={handleSetRemoteId} value={remoteIdInp} placeholder="Enter Remote ID" className='h-50 border-dark'></input> */}
-                            <button id="callBtn" className='btn btn-success m-2' onClick={handleCall}>Call</button>
-                        </div>
-                    }
                 </div>
             )}
 
@@ -971,7 +1048,7 @@ function Index() {
                     }
 
                     {recordingStopped &&
-                        <button className='btn btn-success m-3' onClick={handleDownload}>Download Videos</button>
+                        <button className='btn btn-success m-3' onClick={handleDownload}>Save Recordings</button>
                     }
                 </div>
             }
