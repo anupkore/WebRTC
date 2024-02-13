@@ -39,6 +39,7 @@ function Index() {
     const [incomingCall, setIncomingCall] = useState(false);
     const [callRequestModal, setCallRequestModal] = useState(false);
     const [caller , setCaller] = useState(null);
+    const [recordingDiv, setRecordingDiv] = useState(true);
     const [stompClient, setStompClient] = useState(null);
 
 
@@ -140,6 +141,7 @@ function Index() {
                 callEndedSubscription();
                 recordRequestSubscription();
                 recordRequestAcceptanceSubscription();
+                recordRequestRejectionSubscription();
                 recordingStoppedSubscription();
 
 
@@ -493,6 +495,7 @@ function Index() {
             stompClient.send("/app/call-request", {}, JSON.stringify({ "callTo": remoteId, "callFrom": myId }))
             //stompClient.send("/app/call", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
             //setTimeout(showReminder, 2 * 60 * 1000);
+            toast.success("Call Request Sent To Patient");
             setTimeout(endCallAutomatically, 15 * 60 * 1000);
         } else {
             setErrorMessage("Stomp is not available");
@@ -535,6 +538,7 @@ function Index() {
 
     function handleRecordClicked() {
         setRecordClicked(true);
+        toast.success("Recording Request Sent To The User");
         sendRecordRequest();
     }
 
@@ -563,14 +567,33 @@ function Index() {
     function recordRequestSubscription() {
         stompClient.subscribe('/user/' + myId + "/topic/recordRequest", (callRecordRequest) => {
             const caller = callRecordRequest.body;
-            const acceptRecordCall = window.confirm(`Doctor wants to record this call for future reference.  Accept?`);
-
-            if (acceptRecordCall) {
-                setRecordingStarted(true);
-                setRecordingTextVisible(true);
-                const id = { "toUser": remoteId };
-                stompClient.send("/app/recordRequestAcceptance", {}, JSON.stringify(id))
+            if(role === 'Patient'){
+                const acceptRecordCall = window.confirm(`Doctor wants to record this call for future reference.  Accept?`);
+                if (acceptRecordCall) {
+                    setRecordingDiv(false);
+                    setRecordingStarted(true);
+                    setRecordingTextVisible(true);
+                    const id = { "toUser": remoteId };
+                    stompClient.send("/app/recordRequestAcceptance", {}, JSON.stringify(id))
+                }else{
+                    const id = { "toUser": remoteId };
+                    stompClient.send("/app/recordRequestRejection", {}, JSON.stringify(id))
+                }
             }
+            else{
+                const acceptRecordCall = window.confirm(`Patient wants to record this call for future reference.  Accept?`);
+                if (acceptRecordCall) {
+                    setRecordingDiv(false);
+                    setRecordingStarted(true);
+                    setRecordingTextVisible(true);
+                    const id = { "toUser": remoteId };
+                    stompClient.send("/app/recordRequestAcceptance", {}, JSON.stringify(id))
+                }else{
+                    const id = { "toUser": remoteId };
+                    stompClient.send("/app/recordRequestRejection", {}, JSON.stringify(id))
+                }
+            }
+            
         });
     }
 
@@ -579,6 +602,14 @@ function Index() {
             console.log(callRecordRequestAcceptance.body);
             setRecordButtonDisplay(true);
             handleStartRecording();
+        });
+    }
+
+    function recordRequestRejectionSubscription() {
+        stompClient.subscribe('/user/' + myId + "/topic/recordRequestRejection", (callRecordRequestAcceptance) => {
+            console.log(callRecordRequestAcceptance.body);
+            setRecordButtonDisplay(false);
+            toast.error("Recording Request Declined By The User");
         });
     }
 
@@ -1037,7 +1068,7 @@ function Index() {
                 </div> */}
 
 
-            {callInitiated && role === "Doctor" &&
+            {callInitiated && recordingDiv &&
                 <div className='text-center'>
                     {recordButtonDisplay && !recordingStopped &&
                         <button className='btn btn-primary m-3' onClick={handleStopRecording}>Stop Recording</button>
