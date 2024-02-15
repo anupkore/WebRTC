@@ -15,7 +15,7 @@ function Index() {
     const { myId, remoteId, role, appointmentId } = useParams();
     const localVideo = useRef();
     const remoteVideo = useRef();
-
+    const [isRecord, setIsRecord] = useState(false);
     const [videoEnabled, setVideoEnabled] = useState(true);
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [errorMessage, setErrorMessage] = useState('');
@@ -27,8 +27,10 @@ function Index() {
     const [patientAlreadyJoined, setPatientAlreadyJoined] = useState(false);
     const [personLeft, setPersonLeft] = useState(false);
     const [leaveClicked, setLeaveClicked] = useState(false);
-    const [localRecorder, setLocalRecorder] = useState(null);
-    const [remoteRecorder, setRemoteRecorder] = useState(null);
+    // const [localRecorder, setLocalRecorder] = useState(null);
+    // const [remoteRecorder, setRemoteRecorder] = useState(null);
+     const localRecorder = useRef(null);
+    const remoteRecorder = useRef(null);
     const [recordingStarted, setRecordingStarted] = useState(false);
     const [recordingTextVisible, setRecordingTextVisible] = useState(false);
     const [recordClicked, setRecordClicked] = useState(false);
@@ -115,9 +117,9 @@ function Index() {
 
     useEffect(() => {
         if (connectClicked) {
-            //const socket = new WebSocket('ws://localhost:8080/websocket');
+            const socket = new WebSocket('ws://localhost:8080/websocket');
             //var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
-            var socket = new WebSocket('wss://192.168.1.206:30030/websocket');
+            //var socket = new WebSocket('wss://192.168.1.206:30030/websocket');
             const client = Stomp.over(socket);
             setStompClient(client); // Update stompClient state
         }
@@ -520,6 +522,7 @@ function Index() {
     }
 
     function sendLeaveRequest() {
+
         if (stompClient !== null) {
             const ids = { myId: myId, remoteId: remoteId };
             stompClient.send("/app/leave", {}, JSON.stringify(ids));
@@ -722,7 +725,7 @@ function Index() {
     }, []);
 
 
-    const startRecording = (mediaStream, setRecorder) => {
+    const startLocalRecording = (mediaStream) => {
         const recorder = RecordRTC(mediaStream, {
             type: 'video',
             videoBitsPerSecond: 100000,
@@ -730,27 +733,47 @@ function Index() {
         });
 
         recorder.startRecording();
+        localRecorder.current = recorder;
+        // setRecorder(recorder);
+        setRecordingStarted(true);
+        setRecordingTextVisible(true);
+    };
 
-        setRecorder(recorder);
+    const startRemoteRecording = (mediaStream) => {
+        const recorder = RecordRTC(mediaStream, {
+            type: 'video',
+            videoBitsPerSecond: 100000,
+            audio: true,
+        });
+
+        recorder.startRecording();
+        remoteRecorder.current = recorder;
+        // setRecorder(recorder);
         setRecordingStarted(true);
         setRecordingTextVisible(true);
     };
 
     const stopRecording = (recorder) => {
-        if (recorder) {
-            recorder.stopRecording(() => {
-                const blob = recorder.getBlob();
-                // Handle the blob (e.g., save it, download it)
-                console.log(blob);
-            });
-        }
-        setRecordingStarted(false);
-        setRecordingTextVisible(false);
-        setRecordClicked(false);
-        setRecordingStopped(true);
-        sendRecordingStoppedMessage();
+        return new Promise((resolve, reject) => {
+            if (recorder) {
+                recorder.stopRecording(() => {
+                    const blob = recorder.getBlob();
+                    // Handle the blob (e.g., save it, download it)
+                    console.log(blob);
+                    resolve(); // Resolve the promise once recording has stopped
+                });
+            } else {
+                reject(new Error('Recorder is not available'));
+            }
+            setRecordingStarted(false);
+            setRecordingTextVisible(false);
+            setRecordClicked(false);
+            setRecordingStopped(true);
+            sendRecordingStoppedMessage();
+            console.log(recorder + "Recorderrrr");
+        });
     };
-
+    
     const downloadLocalBlob = (localBlob) => {
         const url = URL.createObjectURL(localBlob);
         const a = document.createElement('a');
@@ -774,17 +797,22 @@ function Index() {
     };
 
     const handleDownload = async () => {
-        if (localRecorder && remoteRecorder) {
-            const doctorStream = localRecorder.getBlob();
-            const patientStream = remoteRecorder.getBlob();
-            console.log("Local Video Blob Size is: " + localRecorder)
-            console.log("Remote Video Blob Size is: " + remoteRecorder)
+console.log(localRecorder.current , remoteRecorder.current,"Hello Recordings")
+        
+        if (localRecorder.current && remoteRecorder.current) {
+            const doctorStream = localRecorder.current.blob;
+            console.log("doctorStream", doctorStream)
+            const patientStream = remoteRecorder.current.blob;
+            console.log("patientStream", patientStream)
+            console.log("Local Video Blob Size is: " + localRecorder.current)
+            console.log("Remote Video Blob Size is: " + remoteRecorder.current)
 
             const formData = new FormData();
             formData.append('doctorStream', doctorStream);
             formData.append('patientStream', patientStream);
             formData.append('appointmentId', appointmentId);
 
+            console.log("FormData: " + formData);
             const response = await fetch('https://192.168.1.206:30002/api/documentation/video-recordings', {
                 method: 'POST',
                 body: formData
@@ -820,15 +848,45 @@ function Index() {
         }
     };
 
+    useEffect(()=>{
+
+        if(isRecord){
+            console.log("Helolving")
+            handleDownload();
+        }
+    },[isRecord]);
 
     const handleStartRecording = () => {
-        startRecording(localVideo.current.srcObject, setLocalRecorder);
-        startRecording(remoteVideo.current.srcObject, setRemoteRecorder);
+        startLocalRecording(localVideo.current.srcObject);
+        startRemoteRecording(remoteVideo.current.srcObject);
     };
 
-    const handleStopRecording = () => {
-        stopRecording(localRecorder);
-        stopRecording(remoteRecorder);
+    const handleStopRecording = async () => {
+    //    // Call stopRecording for both local and remote recorders
+    // const stopLocal = stopRecording(localRecorder.current);
+    // const stopRemote = stopRecording(remoteRecorder.current);
+    
+    // // Wait for both stopRecording calls to complete
+    // await Promise.all([stopLocal, stopRemote]);
+
+    // setIsRecord(true);
+
+    return new Promise((resolve, reject) => {
+        // Call stopRecording for both local and remote recorders
+        const stopLocal = stopRecording(localRecorder.current);
+        const stopRemote = stopRecording(remoteRecorder.current);
+
+        // Wait for both stopRecording calls to complete
+        Promise.all([stopLocal, stopRemote])
+            .then(() => {
+                setIsRecord(true);
+                resolve(); // Resolve the promise once all lines inside have executed
+            })
+            .catch(error => {
+                reject(error); // Reject the promise if there's an error
+            });
+    });
+
     };
 
     const blinkingDotStyle = {
@@ -1077,10 +1135,10 @@ function Index() {
                     {!recordButtonDisplay && !recordingStopped &&
                         <button className='btn btn-primary m-3' onClick={handleRecordClicked}>Start Recording</button>
                     }
-
+                    {/* 
                     {recordingStopped &&
                         <button className='btn btn-success m-3' onClick={handleDownload}>Save Recordings</button>
-                    }
+                    } */}
                 </div>
             }
 
