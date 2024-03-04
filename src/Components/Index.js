@@ -117,9 +117,9 @@ function Index() {
 
     useEffect(() => {
         if (connectClicked) {
-            const socket = new WebSocket('ws://localhost:8080/websocket');
+            //const socket = new WebSocket('ws://localhost:8080/websocket');
             //var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
-            //var socket = new WebSocket('wss://192.168.1.206:30030/websocket');
+            var socket = new WebSocket('wss://192.168.1.206:30030/websocket');
             const client = Stomp.over(socket);
             setStompClient(client); // Update stompClient state
         }
@@ -408,7 +408,7 @@ function Index() {
             console.log(object.body);
             setPersonLeft(true);
             setTimeout(() => {
-                handleLeave();
+                handleLeave_Second();
             }, 5000);
         });
     }
@@ -484,7 +484,7 @@ function Index() {
         if (stompClient) {
             const reminderMessage = {
                 type: 'reminder',
-                message: '1 minutes remaining!',
+                message: '3 minutes remaining!',
             };
 
             stompClient.send("/app/sendMessage", {}, JSON.stringify(reminderMessage));
@@ -496,9 +496,9 @@ function Index() {
         if (stompClient) {
             stompClient.send("/app/call-request", {}, JSON.stringify({ "callTo": remoteId, "callFrom": myId }))
             //stompClient.send("/app/call", {}, JSON.stringify({"callTo": remoteIdInp.current.value, "callFrom": localIdInp.current.value}))
-            //setTimeout(showReminder, 2 * 60 * 1000);
+            setTimeout(showReminder, 2 * 60 * 1000);
             toast.success("Call Request Sent To Patient");
-            setTimeout(endCallAutomatically, 15 * 60 * 1000);
+            setTimeout(endCallAutomatically, 5 * 60 * 1000);
         } else {
             setErrorMessage("Stomp is not available");
             window.alert("User Already Busy in Another Call");
@@ -521,23 +521,7 @@ function Index() {
         
     }
 
-    function sendLeaveRequest() {
 
-        if (stompClient !== null) {
-            const ids = { myId: myId, remoteId: remoteId };
-            stompClient.send("/app/leave", {}, JSON.stringify(ids));
-
-            // Disconnect the WebSocket connection
-            stompClient.disconnect(() => {
-                console.log('STOMP client disconnected');
-            });
-            if (role === "Doctor") {
-                window.location.href = "http://192.168.1.206:30092/app";
-            } else {
-                window.location.href = "http://192.168.1.206:30091/dashboard/appointments";
-            }
-        }
-    }
 
     function handleRecordClicked() {
         setRecordClicked(true);
@@ -637,6 +621,41 @@ function Index() {
         clearTimeout(endCallAutomatically);
         hideVideos();
         sendLeaveRequest();
+    }
+
+    function handleLeave_Second(){
+        setLeaveClicked(true);
+        console.log("Leave button clicked");
+        clearTimeout(showReminder);
+        clearTimeout(endCallAutomatically);
+        hideVideos();
+        // Disconnect the WebSocket connection
+        stompClient.disconnect(() => {
+            console.log('STOMP client disconnected');
+        });
+        if (role === "Doctor") {
+            window.location.href = "http://192.168.1.206:30092/app";
+        } else {
+            window.location.href = "http://192.168.1.206:30091/dashboard/appointments";
+        }
+    }
+
+    function sendLeaveRequest() {
+
+        if (stompClient !== null) {
+            const ids = { myId: myId, remoteId: remoteId };
+            stompClient.send("/app/leave", {}, JSON.stringify(ids));
+
+            // Disconnect the WebSocket connection
+            stompClient.disconnect(() => {
+                console.log('STOMP client disconnected');
+            });
+            if (role === "Doctor") {
+                window.location.href = "http://192.168.1.206:30092/app";
+            } else {
+                window.location.href = "http://192.168.1.206:30091/dashboard/appointments";
+            }
+        }
     }
 
 
@@ -796,91 +815,116 @@ function Index() {
         window.URL.revokeObjectURL(url);
     };
 
-    const handleDownload = async () => {
-console.log(localRecorder.current , remoteRecorder.current,"Hello Recordings")
+//     const handleDownload = async () => {
+// console.log(localRecorder.current , remoteRecorder.current,"Hello Recordings")
         
-        if (localRecorder.current && remoteRecorder.current) {
-            const doctorStream = localRecorder.current.blob;
-            console.log("doctorStream", doctorStream)
-            const patientStream = remoteRecorder.current.blob;
-            console.log("patientStream", patientStream)
-            console.log("Local Video Blob Size is: " + localRecorder.current)
-            console.log("Remote Video Blob Size is: " + remoteRecorder.current)
+//         if (localRecorder.current && remoteRecorder.current) {
+//             const doctorStream = localRecorder.current.blob;
+//             console.log("doctorStream", doctorStream)
+//             const patientStream = remoteRecorder.current.blob;
+//             console.log("patientStream", patientStream)
+//             console.log("Local Video Blob Size is: " + localRecorder.current)
+//             console.log("Remote Video Blob Size is: " + remoteRecorder.current)
 
-            const formData = new FormData();
-            formData.append('doctorStream', doctorStream);
-            formData.append('patientStream', patientStream);
-            formData.append('appointmentId', appointmentId);
+//             const formData = new FormData();
+//             formData.append('doctorStream', doctorStream);
+//             formData.append('patientStream', patientStream);
+//             formData.append('appointmentId', appointmentId);
 
-            console.log("FormData: " + formData);
-            const response = await fetch('https://192.168.1.206:30002/api/documentation/video-recordings', {
-                method: 'POST',
-                body: formData
-            });
+//             console.log("FormData: " + formData);
+//             const response = await fetch('https://192.168.1.206:30002/api/documentation/video-recordings', {
+//                 method: 'POST',
+//                 body: formData
+//             });
 
-            console.log(response);
-            toast.success("Video Saved Successfully");
-            // const response = await fetch('https://192.168.1.206:30031/side', {
-            //     method: 'POST',
-            //     body: formData,
-            // });
+//             console.log(response);
+//             toast.success("Video Saved Successfully");
+//             // const response = await fetch('https://192.168.1.206:30031/side', {
+//             //     method: 'POST',
+//             //     body: formData,
+//             // });
 
-            // console.log(response);
+//             // console.log(response);
 
-            // if (response.ok) {
-            //     const blob = await response.blob();
-            //     console.log("Merged Video size is"+blob.size)
-            //     const url = URL.createObjectURL(blob);
+//             // if (response.ok) {
+//             //     const blob = await response.blob();
+//             //     console.log("Merged Video size is"+blob.size)
+//             //     const url = URL.createObjectURL(blob);
 
-            //     // Create a link and trigger a download
-            //     const a = document.createElement('a');
-            //     a.href = url;
-            //     a.download = `Date ${new Date().toISOString()} merged_video.webm`;
-            //     a.click();
-            //     window.URL.revokeObjectURL(url);
-            // } else {
-            //     // Handle errors
-            //     console.error('Error merging videos:', response.statusText);
-            // }
+//             //     // Create a link and trigger a download
+//             //     const a = document.createElement('a');
+//             //     a.href = url;
+//             //     a.download = `Date ${new Date().toISOString()} merged_video.webm`;
+//             //     a.click();
+//             //     window.URL.revokeObjectURL(url);
+//             // } else {
+//             //     // Handle errors
+//             //     console.error('Error merging videos:', response.statusText);
+//             // }
 
-            //downloadLocalBlob(localBlob);
-            //downloadRemoteBlob(remoteBlob);
+//             //downloadLocalBlob(localBlob);
+//             //downloadRemoteBlob(remoteBlob);
+//         }
+//     };
+
+const handleDownload = async () => {
+    console.log(localRecorder.current, remoteRecorder.current, "Hello Recordings");
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (localRecorder.current && remoteRecorder.current) {
+                const doctorStream = localRecorder.current.blob;
+                console.log("doctorStream", doctorStream);
+                const patientStream = remoteRecorder.current.blob;
+                console.log("patientStream", patientStream);
+                console.log("Local Video Blob Size is: " + localRecorder.current);
+                console.log("Remote Video Blob Size is: " + remoteRecorder.current);
+
+                const formData = new FormData();
+                formData.append('doctorStream', doctorStream);
+                formData.append('patientStream', patientStream);
+                formData.append('appointmentId', appointmentId);
+
+                console.log("FormData: " + formData);
+                const response = await fetch('https://192.168.1.206:30002/api/documentation/video-recordings', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log(response);
+                toast.success("Video Saved Successfully");
+
+                resolve(response); // Resolve the promise with the response object
+            } else {
+                // Reject the promise if localRecorder.current or remoteRecorder.current is falsy
+                reject(new Error("Local or remote recorder not available"));
+            }
+        } catch (error) {
+            // Reject the promise if there's an error
+            reject(error);
         }
-    };
+    });
+};
+    
 
-    useEffect(()=>{
-
-        if(isRecord){
-            console.log("Helolving")
-            handleDownload();
-        }
-    },[isRecord]);
-
-    const handleStartRecording = () => {
+const handleStartRecording = () => {
         startLocalRecording(localVideo.current.srcObject);
         startRemoteRecording(remoteVideo.current.srcObject);
     };
 
-    const handleStopRecording = async () => {
-    //    // Call stopRecording for both local and remote recorders
-    // const stopLocal = stopRecording(localRecorder.current);
-    // const stopRemote = stopRecording(remoteRecorder.current);
-    
-    // // Wait for both stopRecording calls to complete
-    // await Promise.all([stopLocal, stopRemote]);
-
-    // setIsRecord(true);
+const handleStopRecording = async () => {
 
     return new Promise((resolve, reject) => {
         // Call stopRecording for both local and remote recorders
         const stopLocal = stopRecording(localRecorder.current);
         const stopRemote = stopRecording(remoteRecorder.current);
 
-        // Wait for both stopRecording calls to complete
         Promise.all([stopLocal, stopRemote])
             .then(() => {
-                setIsRecord(true);
-                resolve(); // Resolve the promise once all lines inside have executed
+                const downloadResponse = handleDownload();
+                Promise.all([downloadResponse]).then(() => {
+                    resolve(downloadResponse);
+                });
             })
             .catch(error => {
                 reject(error); // Reject the promise if there's an error
@@ -889,7 +933,7 @@ console.log(localRecorder.current , remoteRecorder.current,"Hello Recordings")
 
     };
 
-    const blinkingDotStyle = {
+const blinkingDotStyle = {
         width: '10px',
         height: '10px',
         backgroundColor: 'red',

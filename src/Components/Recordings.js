@@ -203,7 +203,7 @@ const Recordings = () => {
       </div>
 
       <div className='d-flex justify-content-center m-5'>
-          <Slider min={0} max={300} value={currentTime} onChange={handleSliderChange} styles={{
+          {/* <Slider min={0} max={300} value={currentTime} onChange={handleSliderChange} styles={{
             track: { backgroundColor: 'black', height: 7 }, // Customize the track (filled part) style
             handle: {
               backgroundColor:'black',
@@ -213,7 +213,7 @@ const Recordings = () => {
               marginLeft: -10, // Adjust the horizontal position of the handle
               marginTop: -8 // Adjust the vertical position of the handle
             }
-          }} />
+          }} /> */}
       </div>
 
       <div className='d-flex justify-content-center'>
