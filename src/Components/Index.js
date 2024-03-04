@@ -647,15 +647,7 @@ function Index() {
         clearTimeout(showReminder);
         clearTimeout(endCallAutomatically);
         hideVideos();
-        // Disconnect the WebSocket connection
-        stompClient.disconnect(() => {
-            console.log('STOMP client disconnected');
-        });
-        if (role === "Doctor") {
-            window.location.href = "http://192.168.1.206:30092/app";
-        } else {
-            window.location.href = "http://192.168.1.206:30091/dashboard/appointments";
-        }
+        sendLeaveRequest();
     }
 
     function sendLeaveRequest() {
