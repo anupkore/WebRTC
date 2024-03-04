@@ -117,9 +117,9 @@ function Index() {
 
     useEffect(() => {
         if (connectClicked) {
-            //const socket = new WebSocket('ws://localhost:8080/websocket');
+            const socket = new WebSocket('ws://localhost:8080/websocket');
             //var socket = new WebSocket('wss://web-rtc-server-git-techbrutal1151-dev.apps.sandbox-m2.ll9k.p1.openshiftapps.com/websocket');
-            var socket = new WebSocket('wss://192.168.1.206:30030/websocket');
+            //var socket = new WebSocket('wss://192.168.1.206:30030/websocket');
             const client = Stomp.over(socket);
             setStompClient(client); // Update stompClient state
         }
@@ -145,7 +145,8 @@ function Index() {
                 recordRequestAcceptanceSubscription();
                 recordRequestRejectionSubscription();
                 recordingStoppedSubscription();
-
+                LeaveInitiatedWhileRecordingOn_Subscription();
+                sendLeaveApprovedAfterRecording_Subscription();
 
                 const ids = { myId: myId, remoteId: remoteId, role: role };
                 stompClient.send("/app/addUser", {}, JSON.stringify(ids));
@@ -615,12 +616,29 @@ function Index() {
 
 
     function handleLeave() {
-        setLeaveClicked(true);
-        console.log("Leave button clicked");
-        clearTimeout(showReminder);
-        clearTimeout(endCallAutomatically);
-        hideVideos();
-        sendLeaveRequest();
+        if(recordingStarted && localRecorder.current && recordingDiv){
+            const stopRecordingResponse = handleStopRecording();
+            Promise.all([stopRecordingResponse]).then(()=>{
+                setLeaveClicked(true);
+                console.log("Leave button clicked");
+                clearTimeout(showReminder);
+                clearTimeout(endCallAutomatically);
+                hideVideos();
+                setTimeout(sendLeaveRequest, 5*1000);
+            })
+        }else if(recordingStarted && !recordingDiv){
+            const ids = { myId: myId, remoteId: remoteId, message:"Leave Initiated by myID" };
+            stompClient.send("/app/sendLeaveInitiatedWhileRecordingOn",{},JSON.stringify(ids));
+        }
+        else{
+            setLeaveClicked(true);
+            console.log("Leave button clicked");
+            clearTimeout(showReminder);
+            clearTimeout(endCallAutomatically);
+            hideVideos();
+            sendLeaveRequest();
+        }
+        
     }
 
     function handleLeave_Second(){
@@ -658,6 +676,23 @@ function Index() {
         }
     }
 
+    function LeaveInitiatedWhileRecordingOn_Subscription(){
+        stompClient.subscribe('/user/' + myId + "/topic/leaveInitiatedWhileRecordingOn", (message) => {
+            console.log("Message from other user is  : " + message.body);
+                const stopRecordingResponse = handleStopRecording();
+                Promise.all([stopRecordingResponse]).then(()=>{
+                    const ids = { myId: myId, remoteId: remoteId, message:"Leave Approved After Recording" };
+                    stompClient.send("/app/sendLeaveApprovedAfterRecording",{},JSON.stringify(ids));
+                })
+        });
+    }
+
+    function sendLeaveApprovedAfterRecording_Subscription(){
+        stompClient.subscribe('/user/' + myId + "/topic/leaveApprovedAfterRecording", (message) => {
+            console.log("Message from other user is  : " + message.body);
+            handleLeave();
+        });
+    }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
